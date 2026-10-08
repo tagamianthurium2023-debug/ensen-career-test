@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>働き方タイプ診断 | 沿線キャリア</title>
+<style>
+:root{--blue:#2673ad;--ink:#233b4b;--pale:#edf7fc;--line:#dce9f0}*{box-sizing:border-box}body{margin:0;background:#f7fbfd;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;line-height:1.8}main{max-width:700px;margin:0 auto;padding:28px 18px 70px}.brand{font-weight:800;letter-spacing:.08em}.eyebrow{font-size:11px;letter-spacing:.17em;color:var(--blue);font-weight:800}.panel{background:white;border:1px solid var(--line);border-radius:22px;padding:clamp(22px,5vw,42px);margin-top:30px;box-shadow:0 12px 40px #28516b0a}h1{font-size:clamp(27px,5vw,39px);line-height:1.45;margin:12px 0 20px}h2{font-size:clamp(21px,4vw,29px);line-height:1.5}p{margin:12px 0;color:#526878}.muted{color:#718b9b;font-size:13px}.choices{display:grid;gap:12px;margin:28px 0}.choice{background:#fff;border:1px solid #cfdee8;border-radius:12px;padding:17px;text-align:left;font:inherit;color:var(--ink);cursor:pointer;transition:.15s}.choice:hover,.choice:focus-visible{border-color:var(--blue);background:var(--pale)}.choice.selected{background:#e4f2fb;border:2px solid var(--blue);padding:16px;font-weight:700}.primary{background:var(--blue);color:#fff;border:0;border-radius:12px;padding:15px 26px;font:inherit;font-weight:700;cursor:pointer}.primary:disabled{opacity:.35;cursor:not-allowed}.secondary{background:transparent;color:var(--blue);border:1px solid #b9d2e2;border-radius:12px;padding:14px 22px;font:inherit;cursor:pointer}.actions{display:flex;gap:12px;justify-content:space-between;margin-top:20px}.progress{height:7px;background:#e8f0f4;border-radius:20px;overflow:hidden;margin:15px 0 30px}.progress>div{height:100%;background:var(--blue);transition:width .2s}.pill{display:inline-block;background:#e7f3fa;border-radius:99px;padding:5px 13px;color:var(--blue);font-size:12px;font-weight:700}.result-emoji{font-size:64px;line-height:1.4}.info{background:var(--pale);border-radius:15px;padding:18px 22px;margin:22px 0}.info h3{margin:0 0 6px;font-size:16px}.info p{margin:0}.foot{font-size:12px;text-align:center;margin-top:30px;color:#82939d}a{color:var(--blue)}[hidden]{display:none!important}
+</style>
+</head>
+<body><main><div class="brand">沿線キャリア</div><div class="eyebrow">WORK STYLE TEST</div><section class="panel" id="app" aria-live="polite"></section><div class="foot">好きな街で、長く働く。<br>© 2026 Anthurium LLC.</div></main>
+<script>
+'use strict';
+const types=[
+{id:'talk',emoji:'🤝',name:'コミュニケーター',description:'人との会話や関係づくりに楽しさを感じる傾向があります。相手の反応を見ながら動ける環境が合うかもしれません。',jobs:'接客・販売・営業・カスタマーサポート'},
+{id:'steady',emoji:'🧩',name:'コツコツサポーター',description:'手順を整えたり、丁寧に物事を進めたりすることを大切にするタイプ。周囲を支える役割にも目を向けてみましょう。',jobs:'一般事務・営業事務・業務管理'},
+{id:'challenge',emoji:'🚀',name:'チャレンジャー',description:'新しい経験や変化のある毎日に魅力を感じる傾向があります。行動力を活かせる環境が候補になりそうです。',jobs:'イベント運営・営業・販売促進'},
+{id:'pace',emoji:'🌿',name:'マイペースワーカー',description:'落ち着いた環境で、自分のリズムを大切に働きたいタイプ。仕事内容だけでなく職場の雰囲気も重視してみて。',jobs:'バックオフィス・データ入力・軽作業'},
+{id:'idea',emoji:'🎨',name:'アイデアメーカー',description:'工夫や発想を活かして、より良いやり方を考えることが好きな傾向があります。',jobs:'SNS運用・制作補助・企画補助・販促'},
+{id:'hands',emoji:'🛠️',name:'実践スペシャリスト',description:'考えるだけでなく、実際に手を動かして形にすることにやりがいを感じるタイプ。',jobs:'現場サポート・技術補助・物流関連'}
+];
+// 各選択肢の score は、6タイプへの加点。通勤・勤務地の設問はタイプ採点から独立。
+const questions=[
+{q:'初対面の人と話すのは？',a:[['むしろ楽しい',{talk:2,challenge:1}],['必要なら問題ない',{steady:1,hands:1}],['できれば少なめがいい',{pace:2,steady:1}]]},
+{q:'仕事で達成感があるのは？',a:[['人に喜んでもらえたとき',{talk:2}],['決めたことを正確に終えたとき',{steady:2,hands:1}],['新しいアイデアが形になったとき',{idea:2}]]},
+{q:'毎日の仕事内容は？',a:[['変化があるほうが楽しい',{challenge:2,talk:1}],['ある程度決まっていると安心',{steady:2,pace:1}],['自分で工夫できると嬉しい',{idea:2,hands:1}]]},
+{q:'チームで働くなら？',a:[['人を引っ張る役が好き',{challenge:2,talk:1}],['周りを支える役が好き',{steady:2,talk:1}],['自分の担当に集中したい',{pace:2,hands:1}]]},
+{q:'何かを覚えるときは？',a:[['人に教わりながら覚えたい',{talk:2}],['手順書を読んで理解したい',{steady:2}],['まずやってみたい',{hands:2,challenge:1}]]},
+{q:'予定が急に変わったら？',a:[['むしろ面白いと思う',{challenge:2}],['落ち着いて調整する',{steady:2}],['できれば事前に知りたい',{pace:2}]]},
+{q:'褒められてうれしいのは？',a:[['話しやすいね',{talk:2}],['丁寧で助かるよ',{steady:2}],['発想が面白いね',{idea:2}]]},
+{q:'休日にやってみたいのは？',a:[['新しい場所へ出かける',{challenge:2}],['家でゆっくり好きなことをする',{pace:2}],['ものづくりやDIYをする',{hands:2,idea:1}]]},
+{q:'興味がある作業は？',a:[['人に商品やサービスを紹介する',{talk:2,challenge:1}],['情報を整理して見やすくする',{steady:2}],['写真や文章を考えて発信する',{idea:2}]]},
+{q:'仕事の進め方で好きなのは？',a:[['周りと相談しながら進める',{talk:2}],['一つずつ確実に仕上げる',{hands:2,steady:1}],['自分で方法を考えて進める',{idea:2,pace:1}]]},
+{q:'通勤時間の理想は？',a:[['できれば30分以内',{}],['45〜60分程度ならOK',{}],['仕事内容が魅力的なら距離は気にしない',{}]],kind:'commute'},
+{q:'働く場所は？',a:[['いつも同じ場所が安心',{}],['たまに変わるのは楽しい',{}],['いろいろな現場に行ってみたい',{}]],kind:'location'}
+];
+const answers=Array(questions.length).fill(null);let step=-1;const app=document.getElementById('app');
+function el(tag,cls,text){const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x}
+function button(label,cls,fn){const b=el('button',cls,label);b.type='button';b.addEventListener('click',fn);return b}
+function show(){app.replaceChildren();if(step===-1){app.append(el('span','pill','全12問・約3分・登録不要'),el('h1','', 'あなたに合うのは、どんな働き方？'),el('p','', '得意なことだけでなく、人との関わり方や通勤の好みから、あなたらしい働き方のヒントを探してみましょう。'),button('診断をはじめる →','primary',()=>{step=0;show()}));return}
+if(step===questions.length){result();return}
+const q=questions[step];app.append(el('div','eyebrow',`QUESTION ${String(step+1).padStart(2,'0')} / ${questions.length}`));const track=el('div','progress'),fill=el('div');fill.style.width=`${100*(step+1)/questions.length}%`;track.append(fill);app.append(track,el('h2','',q.q));const opts=el('div','choices');q.a.forEach(([label],i)=>{const b=button(label,'choice'+(answers[step]===i?' selected':''),()=>{answers[step]=i;show()});b.setAttribute('aria-pressed',String(answers[step]===i));opts.append(b)});app.append(opts);const actions=el('div','actions');actions.append(button('← 戻る','secondary',()=>{step--;show()}));const next=button(step===questions.length-1?'結果を見る →':'次へ →','primary',()=>{step++;show()});next.disabled=answers[step]===null;actions.append(next);app.append(actions)}
+function result(){const scores=Object.fromEntries(types.map(t=>[t.id,0]));questions.forEach((q,i)=>{const add=q.a[answers[i]][1];Object.keys(add).forEach(k=>scores[k]+=add[k])});const winner=types.reduce((best,t)=>scores[t.id]>scores[best.id]?t:best,types[0]);const commute=['近場重視','通勤バランス型','仕事内容重視'][answers[10]];const commuteCopy=['通勤時間を抑えて、暮らしの近くで働く選択肢を探してみましょう。','近場だけでなく、少し範囲を広げて比べるのもよさそうです。','仕事内容や職場環境を優先して、幅広い勤務地を検討してみましょう。'][answers[10]];app.append(el('div','eyebrow','YOUR WORK STYLE'),el('div','result-emoji',winner.emoji),el('span','pill',commute),el('h1','',winner.name),el('p','',winner.description));const jobs=el('div','info');jobs.append(el('h3','','おすすめの仕事の例'),el('p','',winner.jobs));app.append(jobs);const travel=el('div','info');travel.append(el('h3','','あなたの通勤スタイル'),el('p','',commuteCopy));app.append(travel);if(answers[11]===2){const extra=el('div','info');extra.append(el('h3','','こんな選択肢も'),el('p','','いろいろな現場で働くイベント運営・セールスプロモーションも候補になるかもしれません。'));app.append(extra)}app.append(el('p','muted','※独自の簡易診断です。結果は自己理解のヒントであり、適性や採用を保証するものではありません。'));app.append(button('もう一度診断する ↻','secondary',()=>{answers.fill(null);step=-1;show()}));}
+show();
+</script></body></html>

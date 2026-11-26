@@ -1,7 +1,7 @@
 
 /* ==================================================
    沿線キャリア 自己分析ラボ
-   メインシステム v1.0.0
+   メインシステム UI v1.1
 ================================================== */
 
 (() => {
@@ -157,7 +157,93 @@
     return "未診断";
   }
 
+  function recommended() {
+    const remaining = tests.filter(t => !state.results[t.id]);
+    return remaining.find(t =>
+      answerCount(t, state.progress[t.id]?.answers || {}) > 0
+    ) || remaining[0];
+  }
+
+  function nextLink() {
+    const t = recommended();
+    return t ? `#test/${t.id}` : "#profile";
+  }
+
+  function nextLabel() {
+    const t = recommended();
+    if (!t) return "マイキャリアカルテを完成させる →";
+    return `${answerCount(t, state.progress[t.id]?.answers || {}) ? "再開" : "次の診断"}：${t.title} →`;
+  }
+
+  function journey() {
+    const next = recommended();
+    const names = {
+      strength: "強み",
+      difficulty: "苦手",
+      workstyle: "働き方",
+      values: "価値観"
+    };
+
+    return `
+      <div class="journey-panel">
+        <div class="journey-header">
+          <h2>自己分析の進捗</h2>
+          <span class="journey-count">
+            ${tests.filter(t => state.results[t.id]).length} / ${tests.length}
+          </span>
+        </div>
+        <div class="journey-steps">
+          ${tests.map(t => `
+            <a class="journey-step ${state.results[t.id] ? "is-done" : next?.id === t.id ? "is-next" : ""}"
+               data-test="${esc(t.id)}"
+               href="#${state.results[t.id] ? "result" : "test"}/${esc(t.id)}">
+              <span class="journey-station">
+                ${state.results[t.id] ? "✓" : esc(t.number)}
+              </span>
+              <strong>${names[t.id]}</strong>
+              <span class="journey-status">
+                ${state.results[t.id] ? "完了" : next?.id === t.id ? "おすすめ" : esc(statusOf(t))}
+              </span>
+            </a>
+          `).join("")}
+        </div>
+        <a class="btn btn-primary" href="${nextLink()}">
+          ${esc(nextLabel())}
+        </a>
+        <p class="small muted" style="margin-top:12px">
+          好きな診断から始めてもOK！
+        </p>
+      </div>
+    `;
+  }
+
+  function nextPanel() {
+    return `
+      <div class="result-next">
+        <h2>${recommended() ? "次の診断へ進もう！" : "4つの診断が完了しました！"}</h2>
+        <p>診断結果はマイカルテに保存されます。</p>
+        ${journey()}
+        <a class="btn btn-secondary" href="#profile">
+          マイカルテを見る
+        </a>
+      </div>
+    `;
+  }
+
   function renderHome() {
+    const visual = document.querySelector(".hero-visual");
+    if (visual) visual.innerHTML = journey();
+
+    const cta = document.querySelector(".hero-copy .btn-primary");
+
+    if (cta) {
+      cta.href = nextLink();
+      cta.textContent = tests.some(t =>
+        state.results[t.id] ||
+        answerCount(t, state.progress[t.id]?.answers || {})
+      ) ? nextLabel() : "無料で自己分析を始める →";
+    }
+
     const completed = tests.filter(t => state.results[t.id]).length;
 
     $("testGrid").innerHTML = tests.map(t => {
@@ -184,30 +270,31 @@
             <a class="btn" href="#${done ? "result" : "test"}/${t.id}">
               ${done ? "診断結果を見る" : started ? "診断を再開する" : "診断を始める"} →
             </a>
+
           </div>
         </article>
       `;
     }).join("");
 
     $("homeProgress").innerHTML = `
-      <div class="progress-header">
-        <span>診断完了数</span>
-        <span>${completed} / ${tests.length}</span>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" style="width:${completed / tests.length * 100}%"></div>
-      </div>
-      ${renderSummary()}
+      ${journey()}
+      ${renderKarteSummary()}
     `;
   }
 
-  function renderSummary() {
+  /* =========================================
+     KARTE SUMMARY
+  ========================================= */
+
+  function renderKarteSummary() {
     return tests.map(t => `
-      <a class="karte-item" href="#${state.results[t.id] ? "result" : "test"}/${t.id}" data-test="${t.id}">
+      <a class="karte-item"
+         data-test="${esc(t.id)}"
+         href="#${state.results[t.id] ? "result" : "test"}/${esc(t.id)}">
         <div class="test-icon">${icons[t.id]}</div>
         <div class="karte-item-content">
           <h3>${esc(t.title)}</h3>
-          <p>${esc(resultHeadline(t.id))}</p>
+          <p>${esc(t.subtitle)}</p>
         </div>
         <span class="karte-status ${state.results[t.id] ? "done" : ""}">
           ${esc(statusOf(t))}
@@ -217,56 +304,99 @@
   }
 
   /* =========================================
-     INTRO
+     TEST INTRODUCTION
   ========================================= */
 
   function renderIntro(id) {
     const t = getTest(id);
-    if (!t) return go("#tests");
+
+    if (!t) {
+      go("#tests");
+      return;
+    }
 
     showView("introView");
     $("introView").dataset.test = id;
 
     const p = state.progress[id];
-    const count = p ? answerCount(t, p.answers || {}) : 0;
+    const done = state.results[id];
+    const count = answerCount(t, p?.answers || {});
 
     $("introContent").innerHTML = `
-      <a href="#tests" class="back-link">← 診断一覧へ</a>
-      <div class="result-hero">
-        <div class="result-kicker">TEST ${esc(t.number)}</div>
-        <div class="test-icon">${icons[id]}</div>
-        <h1 style="margin-top:16px">${esc(t.title)}</h1>
-        <p class="result-description">${esc(t.subtitle)}</p>
-      </div>
+      <a class="back-link" href="#tests">
+        ← 診断一覧に戻る
+      </a>
 
-      <div class="result-section">
-        <h2>この診断について</h2>
-        <p>${esc(t.description)}</p>
-        <div class="chips" style="margin-top:18px">
+      <div class="result-hero">
+        <div class="result-kicker">
+          TEST ${esc(t.number)} / SELF ANALYSIS
+        </div>
+        <div class="test-icon">${icons[id]}</div>
+        <h1 style="margin-top:18px">
+          ${esc(t.title)}
+        </h1>
+        <p class="result-description">
+          ${esc(t.subtitle)}
+        </p>
+        <p class="result-description">
+          ${esc(t.description)}
+        </p>
+        <div class="chips" style="margin-top:20px">
           <span class="chip">全${t.questions.length}問</span>
           <span class="chip">約${esc(t.minutes)}分</span>
-          <span class="chip">登録不要</span>
+          <span class="chip">完全無料</span>
+          <span class="chip">途中保存OK</span>
         </div>
       </div>
 
-      <div class="result-section">
-        <h2>回答するときのポイント</h2>
-        <p>${esc(t.instruction)}</p>
-        <ul>
-          <li>正解・不正解はありません。</li>
-          <li>仕事以外の日常生活の経験も参考にしてください。</li>
-          <li>判断できない場合は、無理に回答する必要はありません。</li>
-        </ul>
-        <div class="notice">
-          回答はこのブラウザ内に保存されます。
-          診断内容が運営会社へ自動送信されることはありません。
+      ${section("この診断で分かること", `
+        <div class="chips">
+          ${t.axes.map(a => `
+            <span class="chip">${esc(a.name)}</span>
+          `).join("")}
         </div>
-      </div>
+      `)}
+
+      ${section("回答する前に", `
+        <p>${esc(t.instruction)}</p>
+        <div class="notice">
+          正解・不正解はありません。
+          理想の自分ではなく、普段の自分に近い回答を選んでください。
+          判断が難しい質問は「分からない」を選択できます。
+        </div>
+      `)}
+
+      ${count && !done ? `
+        <div class="result-section">
+          <h2>途中から再開できます</h2>
+          <div class="progress-header">
+            <span>${count} / ${t.questions.length}問 回答済み</span>
+            <span>${Math.round(count / t.questions.length * 100)}%</span>
+          </div>
+          <div class="progress-track" style="margin-top:10px">
+            <div class="progress-fill"
+                 style="width:${count / t.questions.length * 100}%">
+            </div>
+          </div>
+        </div>
+      ` : ""}
 
       <div class="stack">
-        ${button(count ? `途中から再開する（${count}問回答済み）` : "診断を始める →", "start", id, "btn-primary btn-block btn-lg")}
-        ${count ? button("最初から回答する", "restart", id, "btn-secondary btn-block") : ""}
-        ${state.results[id] ? button("保存済みの結果を見る", "result", id, "btn-ghost btn-block") : ""}
+        ${done ? `
+          ${button("診断結果を見る →", "result", id, "btn-primary btn-block btn-lg")}
+          ${button("もう一度診断する", "restart", id, "btn-secondary btn-block")}
+        ` : `
+          ${button(
+            count ? "診断を再開する →" : "診断を始める →",
+            "start",
+            id,
+            "btn-primary btn-block btn-lg"
+          )}
+          ${count ? button("最初からやり直す", "restart", id, "btn-ghost btn-block") : ""}
+        `}
+        <a class="btn btn-ghost btn-block" href="#tests">
+          他の診断を見る
+        </a>
       </div>
     `;
   }
@@ -276,21 +406,49 @@
   ========================================= */
 
   function startTest(id, reset = false) {
-    activeTest = getTest(id);
-    if (!activeTest) return;
+    const t = getTest(id);
+    if (!t) return;
 
     if (reset) {
+      if (!confirm("この診断を最初からやり直しますか？")) return;
+
       delete state.progress[id];
+      delete state.results[id];
+      save();
     }
 
-    const p = state.progress[id] || {};
-    answers = { ...(p.answers || {}) };
-    priorities = Array.isArray(p.priorities) ? [...p.priorities] : [];
-    step = Number.isInteger(p.step) ? p.step : 0;
-    step = Math.max(0, Math.min(step, activeTest.questions.length - 1));
-
-    saveProgress();
     go(`#quiz/${id}`);
+  }
+
+  function loadQuiz(id) {
+    const t = getTest(id);
+
+    if (!t) {
+      go("#tests");
+      return;
+    }
+
+    activeTest = t;
+
+    const p = state.progress[id] || {};
+
+    answers = { ...(p.answers || {}) };
+    priorities = [...(p.priorities || [])];
+
+    const firstUnanswered = t.questions.findIndex(
+      q => !hasAnswer(answers, q.id)
+    );
+
+    step = Number.isInteger(p.step)
+      ? p.step
+      : Math.max(0, firstUnanswered);
+
+    step = Math.max(
+      0,
+      Math.min(step, t.questions.length - 1)
+    );
+
+    renderQuiz();
   }
 
   function saveProgress() {
@@ -302,124 +460,258 @@
       step,
       updatedAt: new Date().toISOString()
     };
+
     save();
   }
 
   function renderQuiz() {
-    if (!activeTest) return go("#tests");
-
-    showView("quizView");
-    $("quizView").dataset.test = activeTest.id;
-    $("quizTitle").textContent = activeTest.title;
+    if (!activeTest) return;
 
     const t = activeTest;
     const q = t.questions[step];
-    const count = answerCount(t, answers);
-    const percent = Math.round(count / t.questions.length * 100);
 
-    $("progressText").textContent = `${count} / ${t.questions.length}問 回答済み`;
-    $("progressPercent").textContent = `${percent}%`;
-    $("progressFill").style.width = `${percent}%`;
-    $("questionNumber").textContent = `QUESTION ${String(step + 1).padStart(2, "0")}`;
-    $("questionText").textContent = q.text || "";
+    showView("quizView");
+    $("quizView").dataset.test = t.id;
 
-    let comparison = "";
+    $("quizTitle").textContent = t.title;
+    $("questionNumber").textContent =
+      `QUESTION ${String(step + 1).padStart(2, "0")}`;
 
-    if (q.a && q.b) {
-      comparison = `
-        <div class="grid-2" style="margin-bottom:20px">
-          <div class="result-card" style="background:#F3F8FA">
+    $("questionText").textContent = q.text;
+
+    const comparison = $("questionComparison");
+
+    if (t.scale === "workstyle") {
+      comparison.innerHTML = `
+        <div class="grid-2" style="margin-bottom:18px">
+          <div class="result-card">
             <strong>A</strong>
             <p>${esc(q.a)}</p>
           </div>
-          <div class="result-card" style="background:#F3F8FA;margin-top:0">
+          <div class="result-card">
             <strong>B</strong>
             <p>${esc(q.b)}</p>
           </div>
         </div>
+        ${q.detail ? `
+          <p class="question-note">${esc(q.detail)}</p>
+        ` : ""}
       `;
+
+      renderWorkstyleSlider();
+
+    } else {
+      comparison.innerHTML = q.detail
+        ? `<p class="question-note">${esc(q.detail)}</p>`
+        : "";
+
+      renderAnswerOptions();
     }
 
-    if (q.detail) {
-      comparison += `<p class="question-note">${esc(q.detail)}</p>`;
-    }
-
-    $("questionComparison").innerHTML = comparison;
-
-    const scale = Q.scales[t.scale];
-
-    $("answerOptions").innerHTML = scale.map((option, index) => {
-      const selected = hasAnswer(answers, q.id) && answers[q.id] === option.value;
-
-      return `
-        <button type="button"
-          class="answer-option ${selected ? "selected" : ""} ${option.value === null ? "unknown-option" : ""}"
-          aria-pressed="${selected}"
-          data-action="answer"
-          data-id="${index}">
-          <span class="option-circle"></span>
-          <span>${esc(option.label)}</span>
-        </button>
-      `;
-    }).join("");
-
-    $("prevQuestion").textContent = step === 0 ? "← 説明へ" : "← 前へ";
+    $("prevQuestion").disabled = step === 0;
 
     $("nextQuestion").textContent =
       step === t.questions.length - 1
-        ? t.id === "values" ? "優先順位を選ぶ →" : "結果を見る →"
+        ? t.scoring === "priority"
+          ? "優先順位を選ぶ →"
+          : "診断結果を見る →"
         : "次へ →";
 
-    $("nextQuestion").disabled = !hasAnswer(answers, q.id);
-
-    const footer = document.querySelector(".quiz-footer");
-    if (footer) {
-      footer.textContent = storageAvailable
-        ? "回答はこのブラウザに保存されます。"
-        : "端末への保存ができない状態です。";
-    }
+    updateQuizProgress();
   }
 
-  function selectAnswer(index) {
+  function renderAnswerOptions() {
+    const t = activeTest;
+    const q = t.questions[step];
+    const scale = Q.scales[t.scale];
+
+    $("answerOptions").innerHTML = scale.map((item, index) => {
+      const selected =
+        hasAnswer(answers, q.id) &&
+        answers[q.id] === item.value;
+
+      return `
+        <button type="button"
+                class="answer-option
+                       ${selected ? "selected" : ""}
+                       ${item.value === null ? "unknown-option" : ""}"
+                data-action="answer"
+                data-id="${index}"
+                aria-pressed="${selected}">
+          <span class="option-circle"></span>
+          <span>${esc(item.label)}</span>
+        </button>
+      `;
+    }).join("");
+  }
+
+  /* =========================================
+     WORKSTYLE SLIDER
+  ========================================= */
+
+  function renderWorkstyleSlider() {
     const q = activeTest.questions[step];
-    const option = Q.scales[activeTest.scale][index];
-    if (!option) return;
+    const answered = hasAnswer(answers, q.id);
+    const current = answered ? answers[q.id] : undefined;
 
-    answers[q.id] = option.value;
-    saveProgress();
+    const value = typeof current === "number"
+      ? current
+      : 2;
 
-    document.querySelectorAll("#answerOptions .answer-option").forEach((el, i) => {
-      el.classList.toggle("selected", i === index);
-      el.setAttribute("aria-pressed", String(i === index));
+    const labels = [
+      "Aの方が自分に合う",
+      "どちらかといえばA",
+      "どちらも同じくらい",
+      "どちらかといえばB",
+      "Bの方が自分に合う"
+    ];
+
+    $("answerOptions").innerHTML = `
+      <div class="workstyle-slider">
+        <div class="slider-labels">
+          <span>Aに近い</span>
+          <span>Bに近い</span>
+        </div>
+
+        <input type="range"
+               id="workstyleRange"
+               min="0"
+               max="4"
+               step="1"
+               value="${value}"
+               aria-label="AとBのどちらに近いか"
+               aria-valuetext="${esc(labels[value])}">
+
+        <div class="slider-ticks">
+          ${["A", "ややA", "中間", "ややB", "B"].map((label, i) => `
+            <button type="button"
+                    class="slider-tick ${current === i ? "selected" : ""}"
+                    data-action="slider-answer"
+                    data-id="${i}"
+                    aria-pressed="${current === i}">
+              ${label}
+            </button>
+          `).join("")}
+        </div>
+
+        <div id="sliderValue" class="slider-value" aria-live="polite">
+          ${typeof current === "number"
+            ? esc(labels[current])
+            : current === null
+              ? "まだ分からない"
+              : "スライダーを動かすか、位置を選んでください"}
+        </div>
+
+        <button type="button"
+                class="answer-option unknown-option slider-unknown ${current === null ? "selected" : ""}"
+                data-action="slider-unknown"
+                aria-pressed="${current === null}">
+          <span class="option-circle"></span>
+          <span>まだ分からない</span>
+        </button>
+      </div>
+    `;
+
+    const range = $("workstyleRange");
+
+    range.addEventListener("input", () => {
+      setSliderAnswer(Number(range.value));
     });
 
-    const count = answerCount(activeTest, answers);
-    const percent = Math.round(count / activeTest.questions.length * 100);
-
-    $("progressText").textContent = `${count} / ${activeTest.questions.length}問 回答済み`;
-    $("progressPercent").textContent = `${percent}%`;
-    $("progressFill").style.width = `${percent}%`;
-    $("nextQuestion").disabled = false;
+    range.addEventListener("change", () => {
+      setSliderAnswer(Number(range.value));
+    });
   }
 
-  $("prevQuestion").addEventListener("click", () => {
-    if (!activeTest) return;
+  function setSliderAnswer(value) {
+    if (!activeTest || activeTest.scale !== "workstyle") return;
 
-    if (step === 0) {
-      saveProgress();
-      go(`#test/${activeTest.id}`);
+    if (value !== null &&
+        (!Number.isInteger(value) || value < 0 || value > 4)) {
       return;
     }
 
-    step--;
-    saveProgress();
-    renderQuiz();
-  });
+    const q = activeTest.questions[step];
 
-  $("nextQuestion").addEventListener("click", () => {
+    answers[q.id] = value;
+
+    const labels = [
+      "Aの方が自分に合う",
+      "どちらかといえばA",
+      "どちらも同じくらい",
+      "どちらかといえばB",
+      "Bの方が自分に合う"
+    ];
+
+    const range = $("workstyleRange");
+
+    if (range && value !== null) {
+      range.value = value;
+      range.setAttribute("aria-valuetext", labels[value]);
+    }
+
+    $("sliderValue").textContent =
+      value === null ? "まだ分からない" : labels[value];
+
+    document.querySelectorAll(".slider-tick").forEach(el => {
+      const selected = value !== null &&
+        Number(el.dataset.id) === value;
+
+      el.classList.toggle("selected", selected);
+      el.setAttribute("aria-pressed", String(selected));
+    });
+
+    const unknown = document.querySelector(".slider-unknown");
+
+    if (unknown) {
+      unknown.classList.toggle("selected", value === null);
+      unknown.setAttribute("aria-pressed", String(value === null));
+    }
+
+    saveProgress();
+    updateQuizProgress();
+  }
+
+  function selectAnswer(index) {
     if (!activeTest) return;
 
     const q = activeTest.questions[step];
+    const item = Q.scales[activeTest.scale][index];
+
+    if (!item) return;
+
+    answers[q.id] = item.value;
+
+    renderAnswerOptions();
+    saveProgress();
+    updateQuizProgress();
+  }
+
+  function updateQuizProgress() {
+    if (!activeTest) return;
+
+    const total = activeTest.questions.length;
+    const count = answerCount(activeTest, answers);
+    const percent = Math.round(count / total * 100);
+    const q = activeTest.questions[step];
+
+    $("progressText").textContent =
+      `${step + 1} / ${total}問`;
+
+    $("progressPercent").textContent =
+      `${percent}% 回答済み`;
+
+    $("progressFill").style.width = `${percent}%`;
+
+    $("nextQuestion").disabled =
+      !hasAnswer(answers, q.id);
+  }
+
+  function nextQuestion() {
+    if (!activeTest) return;
+
+    const q = activeTest.questions[step];
+
     if (!hasAnswer(answers, q.id)) return;
 
     if (step < activeTest.questions.length - 1) {
@@ -429,58 +721,82 @@
       return;
     }
 
-    if (activeTest.id === "values") {
+    const unanswered = activeTest.questions.findIndex(
+      item => !hasAnswer(answers, item.id)
+    );
+
+    if (unanswered >= 0) {
+      step = unanswered;
+      saveProgress();
+      renderQuiz();
+      return;
+    }
+
+    if (activeTest.scoring === "priority") {
       renderPriorities();
     } else {
       finishTest();
     }
-  });
+  }
+
+  function prevQuestion() {
+    if (!activeTest || step === 0) return;
+
+    step--;
+    saveProgress();
+    renderQuiz();
+  }
 
   /* =========================================
-     VALUES PRIORITIES
+     VALUES PRIORITY
   ========================================= */
 
   function renderPriorities() {
     const t = activeTest;
-    if (!t || t.id !== "values") return;
+    if (!t) return;
 
     showView("introView");
-    $("introView").dataset.test = "values";
+    $("introView").dataset.test = t.id;
 
     const max = t.priorityCount || 5;
-    const scores = calculateScores(t, answers);
 
     $("introContent").innerHTML = `
       <div class="result-hero">
-        <div class="result-kicker">FINAL STEP</div>
-        <h1>大切にしたいことを選ぶ</h1>
+        <div class="result-kicker">
+          TEST ${esc(t.number)} / FINAL STEP
+        </div>
+        <h1>大切にしたいことを選ぼう。</h1>
         <p class="result-description">
-          ${esc(t.priorityInstruction || "特に大切にしたい価値観を最大5つ選んでください。")}
+          ${esc(t.priorityInstruction || "")}
         </p>
       </div>
 
       <div class="result-section">
-        <h2>あなたの優先順位</h2>
-        <p>選んだ順番が優先順位になります。もう一度押すと選択を解除できます。</p>
-        <div class="notice" style="margin:16px 0">
-          ${priorities.length} / ${max}項目 選択中
+        <div class="progress-header">
+          <span>選択した価値観</span>
+          <span>${priorities.length} / ${max}</span>
         </div>
-        <div class="stack">
-          ${scores.map(a => {
+
+        <div class="notice" style="margin-bottom:20px">
+          選択した順番が優先順位になります。
+          選び直す場合は、もう一度押して解除してください。
+          無理に${max}つ選ぶ必要はありません。
+        </div>
+
+        <div class="answer-options">
+          ${t.axes.map(a => {
             const rank = priorities.indexOf(a.id);
+
             return `
               <button type="button"
-                class="answer-option ${rank >= 0 ? "selected" : ""}"
-                aria-pressed="${rank >= 0}"
-                data-action="priority"
-                data-id="${a.id}">
+                      class="answer-option ${rank >= 0 ? "selected" : ""}"
+                      data-action="priority"
+                      data-id="${esc(a.id)}"
+                      aria-pressed="${rank >= 0}">
                 <span class="option-circle"></span>
                 <span>
-                  ${rank >= 0 ? `<strong>${rank + 1}位　</strong>` : ""}
+                  ${rank >= 0 ? `${rank + 1}位　` : ""}
                   ${esc(a.name)}
-                  <span class="small muted">
-                    ${a.average === null ? "未判断" : `（重要度 ${a.average}/4）`}
-                  </span>
                 </span>
               </button>
             `;
@@ -489,73 +805,85 @@
       </div>
 
       <div class="stack">
-        ${button("診断結果を見る →", "finish", "", "btn-primary btn-block btn-lg")}
-        ${button("設問に戻る", "back-quiz", "", "btn-secondary btn-block")}
+        ${button(
+          priorities.length ? "診断結果を見る →" : "優先順位を選ばず結果を見る →",
+          "finish",
+          t.id,
+          "btn-primary btn-block btn-lg"
+        )}
+
+        ${button(
+          "← 回答に戻る",
+          "back-quiz",
+          t.id,
+          "btn-ghost btn-block"
+        )}
       </div>
-      <p class="small muted center" style="margin-top:16px">
-        優先順位がまだ決まっていない場合は、選択せずに進めます。
-      </p>
     `;
   }
 
   function togglePriority(id) {
-    const max = activeTest.priorityCount || 5;
+    if (!activeTest) return;
 
-    if (priorities.includes(id)) {
-      priorities = priorities.filter(x => x !== id);
+    if (!activeTest.axes.some(a => a.id === id)) return;
+
+    const index = priorities.indexOf(id);
+
+    if (index >= 0) {
+      priorities.splice(index, 1);
     } else {
-      if (priorities.length >= max) {
-        toast(`最大${max}項目まで選択できます。`);
+      if (priorities.length >= (activeTest.priorityCount || 5)) {
+        toast("選択できるのは最大5つです。");
         return;
       }
+
       priorities.push(id);
     }
 
+    const scroll = window.scrollY;
+
     saveProgress();
     renderPriorities();
+    window.scrollTo(0, scroll);
   }
 
   /* =========================================
      SCORING
   ========================================= */
 
-  function calculateScores(test, data) {
+  function calculateScores(test, source) {
     return test.axes.map(axis => {
-      const questions = test.questions.filter(q => q.axis === axis.id);
+      const questions = test.questions.filter(
+        q => q.axis === axis.id
+      );
 
-      const valid = questions
-        .map(q => data[q.id])
-        .filter(v => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 4);
+      const values = questions
+        .map(q => source[q.id])
+        .filter(v =>
+          typeof v === "number" &&
+          Number.isFinite(v) &&
+          v >= 0 &&
+          v <= 4
+        );
 
-      const minimum = test.id === "values" ? 1 : 2;
+      const minimum = test.scoring === "priority" ? 1 : 2;
 
-      const average = valid.length >= minimum
-        ? valid.reduce((a, b) => a + b, 0) / valid.length
+      const average = values.length >= minimum
+        ? values.reduce((sum, value) => sum + value, 0) / values.length
         : null;
 
       return {
         ...axis,
         average,
-        score: average === null ? null : Math.round(average * 25),
-        valid: valid.length,
+        score: average === null
+          ? null
+          : Math.round(average * 25),
+        valid: values.length,
         total: questions.length,
-        mixed: valid.some(v => v <= 1) && valid.some(v => v >= 3)
+        mixed: values.some(v => v <= 1) &&
+               values.some(v => v >= 3)
       };
     });
-  }
-
-  function ranked(scores) {
-    return scores
-      .filter(a => a.average !== null)
-      .slice()
-      .sort((a, b) => b.average - a.average);
-  }
-
-  function topAxes(scores, limit = 3, minimum = 3) {
-    const eligible = ranked(scores).filter(a => a.average >= minimum);
-    if (eligible.length <= limit) return eligible;
-    const cutoff = eligible[limit - 1].average;
-    return eligible.filter(a => a.average >= cutoff);
   }
 
   function finishTest() {
@@ -563,92 +891,46 @@
 
     const t = activeTest;
 
-    if (answerCount(t, answers) !== t.questions.length) {
-      toast("未回答の設問があります。");
-      step = t.questions.findIndex(q => !hasAnswer(answers, q.id));
-      renderQuiz();
+    if (answerCount(t, answers) < t.questions.length) {
+      toast("未回答の質問があります。");
       return;
     }
 
-    const scores = calculateScores(t, answers);
-
     state.results[t.id] = {
       id: t.id,
-      scores,
+      scores: calculateScores(t, answers),
       answers: { ...answers },
       priorities: [...priorities],
       completedAt: new Date().toISOString()
     };
 
     delete state.progress[t.id];
+
     save();
+
     go(`#result/${t.id}`);
   }
 
-  function strengthCombination(result) {
-    if (!result) return null;
+  function topAxes(scores, limit = 3, minimum = 3) {
+    const valid = scores
+      .filter(a =>
+        typeof a.average === "number" &&
+        a.average >= minimum
+      )
+      .sort((a, b) => b.average - a.average);
 
-    const top = topAxes(result.scores, 2, 3);
+    if (valid.length <= limit) return valid;
 
-    if (top.length !== 2) return null;
+    const cutoff = valid[limit - 1].average;
 
-    return (R.combinations || []).find(c =>
-      Array.isArray(c.axes) &&
-      c.axes.length === 2 &&
-      c.axes.every(id => top.some(a => a.id === id))
-    ) || null;
-  }
-
-  function resultHeadline(id) {
-    const result = state.results[id];
-    if (!result) return "まだ診断していません";
-
-    if (id === "strength") {
-      const combo = strengthCombination(result);
-      if (combo) return combo.title;
-
-      const top = topAxes(result.scores, 3);
-      return top.length
-        ? top.map(a => a.short || a.name).join("・")
-        : "強みの傾向を整理しました";
-    }
-
-    if (id === "difficulty") {
-      const top = topAxes(result.scores, 3);
-      return top.length
-        ? top.map(a => a.short || a.name).join("・")
-        : "負担を感じる場面を整理しました";
-    }
-
-    if (id === "workstyle") {
-      const selected = result.scores
-        .filter(a => a.average !== null && !a.mixed && Math.abs(a.average - 2) >= 1)
-        .map(a => a.average < 2 ? a.left : a.right)
-        .filter(Boolean);
-
-      return selected.length
-        ? selected.slice(0, 3).join("・")
-        : "働き方の好みを整理しました";
-    }
-
-    if (id === "values") {
-      const names = result.priorities.map(key =>
-        result.scores.find(a => a.id === key)?.name
-      ).filter(Boolean);
-
-      return names.length
-        ? names.join("・")
-        : "仕事の価値観を整理しました";
-    }
-
-    return "診断済み";
+    return valid.filter(a => a.average >= cutoff);
   }
 
   /* =========================================
      RESULT CHARTS
   ========================================= */
 
-  function scoreBars(scores, id) {
+  function renderScoreList(scores) {
     return `
       <div class="score-list">
         ${scores.map(a => `
@@ -656,414 +938,643 @@
             <div class="score-head">
               <span>${esc(a.name)}</span>
               <span class="score-value">
-                ${a.score === null ? "―" : a.score}
+                ${a.score === null ? "—" : a.score}
               </span>
             </div>
-            ${a.score === null ? "" : `
-              <div class="score-track">
-                <div class="score-fill" style="width:${a.score}%"></div>
+
+            <div class="score-track">
+              <div class="score-fill"
+                   style="width:${a.score === null ? 0 : a.score}%">
               </div>
-            `}
+            </div>
+
             <div class="score-caption">
-              ${a.score === null ? "判断に必要な回答が不足しています" : `有効回答 ${a.valid}/${a.total}問`}
+              ${a.score === null
+                ? "判断に必要な回答数が不足しています"
+                : `有効回答 ${a.valid} / ${a.total}問`}
             </div>
           </div>
         `).join("")}
       </div>
-      <p class="chart-note">
-        ${id === "difficulty"
-          ? "数値が高いほど、本人が負担を感じやすいと回答した傾向です。"
-          : id === "values"
-            ? "数値が高いほど、本人が大切にしていると回答した項目です。"
-            : "数値が高いほど、自分に当てはまると回答した傾向です。"}
-        0〜100に換算した自己評価であり、他者との比較や能力の証明ではありません。
-      </p>
     `;
   }
 
   function radar(scores) {
-    if (scores.some(a => a.score === null)) {
-      return '<p class="notice">未判断の項目があるため、レーダーチャートは省略しています。</p>';
+    if (!scores.length ||
+        scores.some(a => a.score === null)) {
+      return `
+        <p class="chart-note">
+          判断できない項目があるため、
+          レーダーチャートの代わりに項目別スコアを表示します。
+        </p>
+      `;
     }
 
-    const n = scores.length;
-    const cx = 200;
-    const cy = 190;
-    const radius = 120;
+    const cx = 180;
+    const cy = 180;
+    const radius = 105;
+    const count = scores.length;
 
-    function point(i, ratio) {
-      const angle = -Math.PI / 2 + i * Math.PI * 2 / n;
+    const point = (i, ratio) => {
+      const angle = -Math.PI / 2 + Math.PI * 2 * i / count;
+
       return [
         cx + Math.cos(angle) * radius * ratio,
         cy + Math.sin(angle) * radius * ratio
       ];
-    }
+    };
 
-    const polygon = ratio => scores.map((_, i) => point(i, ratio).join(",")).join(" ");
+    const polygon = ratio => scores.map((a, i) =>
+      point(i, ratio).join(",")
+    ).join(" ");
+
+    const result = scores.map((a, i) =>
+      point(i, a.score / 100).join(",")
+    ).join(" ");
 
     return `
       <div class="radar-wrap">
-        <svg viewBox="0 0 400 380" role="img" aria-label="診断スコアのレーダーチャート">
-          ${[0.25, 0.5, 0.75, 1].map(r => `
+        <svg viewBox="0 0 360 360"
+             role="img"
+             aria-label="診断結果のレーダーチャート">
+
+          ${[.25, .5, .75, 1].map(r => `
             <polygon points="${polygon(r)}"
-              fill="none" stroke="#DCE5EA" stroke-width="1"/>
+                     fill="none"
+                     stroke="#DCE6EB"
+                     stroke-width="1"/>
           `).join("")}
 
           ${scores.map((a, i) => {
             const [x, y] = point(i, 1);
-            const [lx, ly] = point(i, 1.27);
+
             return `
-              <line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#DCE5EA"/>
-              <text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle"
-                font-size="11" fill="#526673">${esc(a.short || a.name)}</text>
+              <line x1="${cx}" y1="${cy}"
+                    x2="${x}" y2="${y}"
+                    stroke="#DCE6EB"/>
             `;
           }).join("")}
 
-          <polygon
-            points="${scores.map((a, i) => point(i, a.score / 100).join(",")).join(" ")}"
-            fill="var(--accent-light)"
-            fill-opacity=".8"
-            stroke="var(--accent)"
-            stroke-width="2.5"/>
+          <polygon points="${result}"
+                   fill="var(--accent-light)"
+                   stroke="var(--accent)"
+                   stroke-width="2.5"/>
 
           ${scores.map((a, i) => {
             const [x, y] = point(i, a.score / 100);
-            return `<circle cx="${x}" cy="${y}" r="4" fill="var(--accent)"/>`;
+            const [lx, ly] = point(i, 1.35);
+
+            return `
+              <circle cx="${x}" cy="${y}" r="4"
+                      fill="var(--accent)"/>
+
+              <text x="${lx}" y="${ly}"
+                    font-size="11"
+                    font-weight="700"
+                    text-anchor="middle"
+                    dominant-baseline="middle"
+                    fill="#202B34">
+                ${esc(a.short || a.name)}
+              </text>
+            `;
           }).join("")}
         </svg>
       </div>
     `;
   }
 
+  function workstyleDirection(axis) {
+    if (axis.average === null) {
+      return {
+        key: "unknown",
+        label: "判断保留"
+      };
+    }
+
+    if (axis.average <= 1) {
+      return { key: "left", label: axis.left };
+    }
+
+    if (axis.average >= 3) {
+      return { key: "right", label: axis.right };
+    }
+
+    if (axis.mixed) {
+      return {
+        key: "middle",
+        label: "場面によって異なる傾向"
+      };
+    }
+
+    if (axis.average < 1.75) {
+      return {
+        key: "left",
+        label: `やや${axis.left}寄り`
+      };
+    }
+
+    if (axis.average > 2.25) {
+      return {
+        key: "right",
+        label: `やや${axis.right}寄り`
+      };
+    }
+
+    return {
+      key: "middle",
+      label: "どちらも同じくらい"
+    };
+  }
+
+  function renderWorkstyleScale(scores) {
+    return scores.map(a => {
+      const direction = workstyleDirection(a);
+
+      return `
+        <div class="scale-row">
+          <div class="scale-title">
+            ${esc(a.name)}
+          </div>
+
+          <div class="scale-labels">
+            <span>${esc(a.left)}</span>
+            <span>${esc(a.right)}</span>
+          </div>
+
+          <div class="scale-track">
+            ${a.score === null ? "" : `
+              <span class="scale-marker"
+                    style="left:${a.score}%">
+              </span>
+            `}
+          </div>
+
+          <div class="slider-value">
+            ${esc(direction.label)}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
   /* =========================================
-     RESULT MASTER DISPLAY
+     RESULT DATA HELPERS
   ========================================= */
 
-  function textBlock(title, value) {
+  function textBlock(value) {
+    if (!value) return "";
+
+    if (Array.isArray(value)) {
+      return list(value);
+    }
+
+    if (typeof value === "string") {
+      return `<p>${esc(value)}</p>`;
+    }
+
+    return "";
+  }
+
+  function detailBlock(title, value) {
     if (!value) return "";
 
     return `
-      <div style="margin-top:16px">
-        <h3>${esc(title)}</h3>
-        ${Array.isArray(value) ? list(value) : `<p>${esc(value)}</p>`}
+      <div class="occupation-detail">
+        <strong>${esc(title)}</strong>
+        ${textBlock(value)}
       </div>
     `;
   }
 
-  function masterCard(name, data) {
-    if (!data) return "";
+  function strengthCombination(top) {
+    if (top.length !== 2) return null;
 
-    return `
-      <article class="result-card">
-        <span class="badge">${esc(name)}</span>
-        <h3>${esc(data.title || data.name || name)}</h3>
-        ${data.catchcopy ? `<p><strong>${esc(data.catchcopy)}</strong></p>` : ""}
-        ${data.description ? `<p>${esc(data.description)}</p>` : ""}
-        ${textBlock("発揮しやすい持ち味", data.strengths)}
-        ${textBlock("力を活かせそうな環境", data.environments)}
-        ${textBlock("確認しておきたいポイント", data.caution)}
-        ${textBlock("仕事選びの確認項目", data.check)}
-        ${textBlock("振り返りのヒント", data.interview || data.question)}
-      </article>
-    `;
+    const ids = top.map(a => a.id);
+
+    const combinations = Array.isArray(R.combinations)
+      ? R.combinations
+      : [];
+
+    return combinations.find(c =>
+      Array.isArray(c.axes) &&
+      c.axes.length === 2 &&
+      c.axes.every(id => ids.includes(id))
+    ) || null;
   }
+
+  /* =========================================
+     STRENGTH RESULT
+  ========================================= */
 
   function renderStrength(result) {
-    const top = topAxes(result.scores, 3);
-    const combo = strengthCombination(result);
+    const scores = result.scores;
+    const top = topAxes(scores);
+    const lower = scores.filter(a =>
+      a.average !== null &&
+      a.average <= 1.5
+    );
 
-    const lower = result.scores
-      .filter(a => a.average !== null && a.average <= 1.5);
+    const combination = strengthCombination(top);
 
-    return `
-      ${section("あなたの強みバランス",
-        radar(result.scores) + scoreBars(result.scores, "strength")
-      )}
+    let html = section("あなたの強みの傾向", `
+      ${radar(scores)}
+      ${renderScoreList(scores)}
+      <p class="chart-note">
+        スコアは自己回答をもとにした傾向であり、
+        他の人との能力比較を示すものではありません。
+      </p>
+    `);
 
-      ${section("あなたが自覚している強み",
-        top.length
-          ? top.map(a => masterCard(a.name, R.strength[a.id])).join("")
-          : '<p>今回は突出した高い自己評価が見られませんでした。具体的な経験を振り返ることで、新たな強みが見つかることもあります。</p>'
-      )}
+    html += section("あなたが活かせそうな強み", `
+      ${top.length ? top.map(a => {
+        const d = R.strength?.[a.id] || {};
 
-      ${combo ? section("強みの組み合わせ", `
+        return `
+          <article class="result-card">
+            <span class="badge">スコア ${a.score}</span>
+            <h3>${esc(d.title || d.name || a.name)}</h3>
+            ${textBlock(d.catchcopy)}
+            ${textBlock(d.description)}
+            ${detailBlock("活かせそうな強み", d.strengths)}
+            ${detailBlock("力を発揮しやすい環境", d.environments)}
+            ${detailBlock("意識しておきたいこと", d.caution)}
+            ${detailBlock("振り返りのヒント", d.check)}
+            ${detailBlock("さらに考えてみたいこと", d.interview || d.question)}
+          </article>
+        `;
+      }).join("") : `
+        <p>
+          今回の回答では、強く当てはまる項目が
+          明確には見つかりませんでした。
+          経験や環境によって強みの感じ方は変わります。
+        </p>
+      `}
+    `);
+
+    if (combination) {
+      html += section("強みの組み合わせ", `
         <div class="insight">
-          <h3>${esc(combo.title)}</h3>
-          <p>${esc(combo.description)}</p>
+          <h3>${esc(combination.title)}</h3>
+          ${textBlock(combination.description)}
         </div>
-      `) : ""}
+      `);
+    }
 
-      ${section("これから確認したいこと", `
-        ${lower.length
-          ? `<p>今回、比較的低く自己評価した項目は次のとおりです。</p>${list(lower.map(a => a.name))}`
-          : "<p>低く自己評価した項目は目立ちませんでした。</p>"}
-        <p>自己評価が低いことは、能力がないことを意味しません。経験や環境、得意な方法によっても変わります。</p>
-      `)}
+    if (lower.length) {
+      html += section("まだ自信を持ちにくいこと", `
+        <div class="chips">
+          ${lower.map(a => `
+            <span class="chip">${esc(a.name)}</span>
+          `).join("")}
+        </div>
+        <p style="margin-top:16px">
+          回答が低いことは、能力がないことを意味しません。
+          経験や環境によって変化する可能性があります。
+        </p>
+      `);
+    }
 
-      ${renderOccupations(result)}
-    `;
+    return html;
   }
 
   /* =========================================
-     DIFFICULTY
+     DIFFICULTY RESULT
   ========================================= */
-
-  const difficultyTips = {
-    conflict: "相談先やクレーム対応の分担が明確な職場か確認しましょう。",
-    ambiguity: "指示や業務手順、完了基準が明確な環境を確認しましょう。",
-    change: "予定変更の頻度や、事前共有の仕組みを確認しましょう。",
-    multitask: "一度に担当する業務量や、優先順位の決め方を確認しましょう。",
-    routine: "業務の変化や工夫できる範囲、成果の見え方を確認しましょう。",
-    pressure: "締切や目標設定、人員配置に無理がないか確認しましょう。",
-    detail: "確認作業の量や、ダブルチェックの仕組みを確認しましょう。",
-    decision: "相談できる上司や、判断基準が用意されているか確認しましょう。"
-  };
 
   function renderDifficulty(result) {
-    const top = topAxes(result.scores, 3);
-    const low = result.scores.filter(a => a.average !== null && a.average <= 1);
+    const scores = result.scores;
+    const high = topAxes(scores, 3, 3);
 
-    return `
-      ${section("負担を感じやすい場面",
-        scoreBars(result.scores, "difficulty")
-      )}
+    const low = scores.filter(a =>
+      a.average !== null &&
+      a.average <= 1
+    );
 
-      ${section("特に確認しておきたい負担要因",
-        top.length
-          ? top.map(a => {
-            const d = R.difficulty?.[a.id] || {};
-            return `
-              <article class="result-card">
-                <span class="badge">${esc(a.name)}</span>
-                <h3>${esc(d.title || d.name || a.name)}</h3>
-                <p>${esc(d.description || "この場面では負担を感じやすいと回答しています。")}</p>
-                ${textBlock("負担が生じやすい場面", d.situations || d.examples || d.triggers)}
-                ${textBlock("環境選びのヒント", d.environments || d.support || d.adjustments || difficultyTips[a.id])}
-                ${textBlock("振り返りのヒント", d.interview || d.question)}
-              </article>
-            `;
-          }).join("")
-          : "<p>今回の回答では、特に強い負担傾向は見られませんでした。ただし、実際の業務量や職場環境によって感じ方は変わります。</p>"
-      )}
+    let html = section("負担を感じやすい場面", `
+      ${radar(scores)}
+      ${renderScoreList(scores)}
+      <p class="chart-note">
+        数値が高いほど、今回の回答では
+        負担を感じやすい傾向があることを示しています。
+      </p>
+    `);
 
-      ${low.length ? section("比較的負担が少ないと感じる場面",
-        list(low.map(a => a.name))
-      ) : ""}
+    html += section("特に意識しておきたいこと", `
+      ${high.length ? high.map(a => {
+        const d = R.difficulty?.[a.id] || {};
 
-      ${section("苦手との付き合い方", `
-        <div class="insight">
-          <p>すべての苦手を克服する必要はありません。自分の希望する働き方に影響するものから、環境の工夫やサポートの活用を考えてみましょう。</p>
+        return `
+          <article class="result-card">
+            <span class="badge">スコア ${a.score}</span>
+            <h3>${esc(d.title || d.name || a.name)}</h3>
+            ${textBlock(d.description)}
+            ${detailBlock(
+              "負担を感じやすい場面",
+              d.situations || d.examples || d.triggers
+            )}
+            ${detailBlock(
+              "働きやすくするための環境",
+              d.environments || d.support || d.adjustments
+            )}
+            ${detailBlock(
+              "振り返りのヒント",
+              d.interview || d.question
+            )}
+          </article>
+        `;
+      }).join("") : `
+        <p>
+          今回の回答では、特に負担が大きい項目は
+          明確には見つかりませんでした。
+          判断保留の項目については、今後の経験も踏まえて
+          考えていきましょう。
+        </p>
+      `}
+    `);
+
+    if (low.length) {
+      html += section("比較的負担を感じにくい場面", `
+        <div class="chips">
+          ${low.map(a => `
+            <span class="chip">${esc(a.name)}</span>
+          `).join("")}
         </div>
-      `)}
-    `;
+        <p style="margin-top:16px">
+          負担を感じにくいことと、得意であることは
+          必ずしも同じではありません。
+          強みの診断結果とあわせて考えてみましょう。
+        </p>
+      `);
+    }
+
+    return html;
   }
 
   /* =========================================
-     WORKSTYLE
+     WORKSTYLE RESULT
   ========================================= */
 
-  function workstyleLabel(a) {
-    if (a.average === null) return "まだ判断できない";
-    if (a.mixed) return "場面によって好みが異なる";
-    if (a.average <= 1) return a.left;
-    if (a.average >= 3) return a.right;
-    if (a.average < 1.75) return `やや${a.left}寄り`;
-    if (a.average > 2.25) return `やや${a.right}寄り`;
-    return "どちらも大切にする傾向";
-  }
-
   function renderWorkstyle(result) {
-    return `
-      ${section("あなたの働き方バランス", `
-        ${result.scores.map(a => `
-          <div class="scale-row">
-            <div class="scale-title">${esc(a.name)}</div>
-            <div class="scale-labels">
-              <span>${esc(a.left)}</span>
-              <span>${esc(a.right)}</span>
-            </div>
-            ${a.score === null ? "" : `
-              <div class="scale-track">
-                <span class="scale-marker" style="left:${a.score}%"></span>
-              </div>
-            `}
-            <p class="small"><strong>${esc(workstyleLabel(a))}</strong></p>
-          </div>
-        `).join("")}
-        <p class="chart-note">左右に優劣はありません。回答の平均位置を表示しています。</p>
-      `)}
+    let html = section("あなたの働き方タイプ", `
+      ${renderWorkstyleScale(result.scores)}
+      <p class="chart-note">
+        左右に優劣はありません。
+        自分が力を発揮しやすい働き方を考えるための結果です。
+      </p>
+    `);
 
-      ${section("職場環境を選ぶヒント",
-        result.scores.map(a => {
-          const data = R.workstyle?.[a.id] || {};
-          const side = a.average === null || a.mixed
-            ? null
-            : a.average < 1.75
-              ? data.left
-              : a.average > 2.25
-                ? data.right
-                : data.middle || data.center;
+    html += section("自分に合う環境を考える", `
+      ${result.scores.map(a => {
+        const direction = workstyleDirection(a);
 
-          return `
-            <article class="result-card">
-              <h3>${esc(a.name)}</h3>
-              <span class="badge">${esc(workstyleLabel(a))}</span>
-              ${typeof side === "string" ? `<p>${esc(side)}</p>` : ""}
-              ${side && typeof side === "object"
-                ? `
-                  ${side.description ? `<p>${esc(side.description)}</p>` : ""}
-                  ${textBlock("環境のヒント", side.environments || side.environment)}
-                  ${textBlock("確認ポイント", side.check || side.caution)}
-                `
-                : `<p>${esc(a.average === null
-                  ? "実際の経験を通じて、自分に合う環境を探してみましょう。"
-                  : "求人情報や面接では、どちらの働き方が中心となる職場か確認してみましょう。")}</p>`
-              }
-            </article>
-          `;
-        }).join("")
-      )}
-    `;
+        if (direction.key === "unknown") return "";
+
+        const data = R.workstyle?.[a.id] || {};
+
+        const d = data[direction.key] ||
+          (direction.key === "middle" ? data.center : null) ||
+          {};
+
+        return `
+          <article class="result-card">
+            <span class="badge">${esc(direction.label)}</span>
+            <h3>${esc(a.name)}</h3>
+            ${typeof d === "string"
+              ? textBlock(d)
+              : `
+                ${textBlock(d.description)}
+                ${detailBlock(
+                  "合いそうな環境",
+                  d.environments || d.environment
+                )}
+                ${detailBlock(
+                  "確認しておきたいこと",
+                  d.check || d.caution
+                )}
+              `}
+          </article>
+        `;
+      }).join("") || "<p>判断に必要な回答数が不足しています。</p>"}
+    `);
+
+    return html;
   }
 
   /* =========================================
-     VALUES
+     VALUES RESULT
   ========================================= */
 
   function renderValues(result) {
-    const selected = result.priorities
+    const selected = (result.priorities || [])
       .map(id => result.scores.find(a => a.id === id))
       .filter(Boolean);
 
-    return `
-      ${section("あなたが大切にしたいこと",
-        selected.length
-          ? selected.map((a, i) => {
-            const d = R.values?.[a.id] || {};
-            return `
-              <article class="result-card">
-                <span class="badge">優先順位 ${i + 1}位</span>
-                <h3>${esc(a.name)}</h3>
-                <p>${esc(d.description || "")}</p>
-                ${textBlock("仕事選びで確認したいこと", d.check)}
-                ${textBlock("自分への問いかけ", d.question)}
-              </article>
-            `;
-          }).join("")
-          : "<p>優先順位はまだ選択されていません。今すぐ決める必要はありません。</p>"
-      )}
+    let html = section("あなたが大切にしたい価値観", `
+      ${selected.length ? selected.map((a, i) => {
+        const d = R.values?.[a.id] || {};
 
-      ${section("12項目の価値観バランス",
-        scoreBars(result.scores, "values")
-      )}
+        return `
+          <article class="result-card">
+            <span class="badge">優先順位 ${i + 1}位</span>
+            <h3>${esc(a.name)}</h3>
+            ${textBlock(d.description)}
+            ${detailBlock("仕事選びで確認したいこと", d.check)}
+            ${detailBlock("自分への問いかけ", d.question)}
+          </article>
+        `;
+      }).join("") : `
+        <p>
+          今回は優先順位を設定していません。
+          項目別の回答を参考に、大切にしたいことを
+          考えてみましょう。
+        </p>
+      `}
+    `);
 
-      ${section("価値観から仕事を考える", `
-        <div class="insight">
-          <p>すべての条件を満たす仕事が見つからないとき、何を優先し、何なら調整できるのかを考えてみましょう。価値観はライフステージによって変わることもあります。</p>
-        </div>
-      `)}
-    `;
+    html += section("価値観ごとの重視度", `
+      ${renderScoreList(result.scores)}
+      <p class="chart-note">
+        優先順位はご自身が選んだ順番を表示しています。
+        重視度のスコアとは別のものです。
+      </p>
+    `);
+
+    return html;
   }
+
 
   /* =========================================
      OCCUPATION SUGGESTIONS
   ========================================= */
 
-  function getOccupations(strengthResult) {
-    if (!strengthResult) return [];
+  function getOccupationSuggestions(result) {
+    if (!result || !Array.isArray(R.occupations)) {
+      return [];
+    }
 
-    const map = Object.fromEntries(
-      strengthResult.scores.map(a => [a.id, a.average])
+    const strength = Object.fromEntries(
+      result.scores.map(a => [a.id, a.average])
     );
 
-    const difficulty = state.results.difficulty?.scores || [];
-    const highBurden = difficulty.filter(a => a.average !== null && a.average >= 3);
+    const difficulty = Object.fromEntries(
+      (state.results.difficulty?.scores || [])
+        .map(a => [a.id, a.average])
+    );
 
-    return (R.occupations || []).map(job => {
+    return R.occupations.map(job => {
       const weights = Object.entries(job.weights || {});
-      const totalWeight = weights.reduce((s, [, w]) => s + w, 0);
-      const valid = weights.filter(([id]) => typeof map[id] === "number");
-      const validWeight = valid.reduce((s, [, w]) => s + w, 0);
 
-      if (!totalWeight || validWeight / totalWeight < 0.75 || valid.length < 2) {
-        return null;
-      }
+      let totalWeight = 0;
+      let validWeight = 0;
+      let weightedScore = 0;
+      let validCount = 0;
+      let highCount = 0;
 
-      const related = valid
-        .filter(([id]) => map[id] >= 3)
-        .map(([id]) => strengthResult.scores.find(a => a.id === id));
+      weights.forEach(([id, weight]) => {
+        if (typeof weight !== "number" || weight <= 0) return;
 
-      if (!related.length) return null;
+        totalWeight += weight;
 
-      const score = valid.reduce((s, [id, w]) => s + map[id] * w, 0) / validWeight;
+        const value = strength[id];
 
-      const risks = highBurden.filter(a => (job.risks || []).includes(a.id));
+        if (typeof value !== "number") return;
 
-      return { ...job, score, related, matchedRisks: risks };
-    })
-      .filter(Boolean)
-      .filter(job => job.score >= 2.75)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 6);
+        validWeight += weight;
+        weightedScore += value * weight;
+        validCount++;
+
+        if (value >= 3) highCount++;
+      });
+
+      const coverage = totalWeight
+        ? validWeight / totalWeight
+        : 0;
+
+      const average = validWeight
+        ? weightedScore / validWeight
+        : 0;
+
+      const risks = (Array.isArray(job.risks) ? job.risks : [])
+        .filter(id =>
+          typeof difficulty[id] === "number" &&
+          difficulty[id] >= 3
+        )
+        .map(id => {
+          const axis = getTest("difficulty")?.axes.find(
+            a => a.id === id
+          );
+
+          return axis?.name || id;
+        });
+
+      return {
+        ...job,
+        average,
+        coverage,
+        validCount,
+        highCount,
+        matchedRisks: risks
+      };
+
+    }).filter(job =>
+      job.coverage >= .75 &&
+      job.validCount >= 2 &&
+      job.highCount >= 1 &&
+      job.average >= 2.75
+
+    ).sort((a, b) =>
+      b.average - a.average
+
+    ).slice(0, 6);
   }
 
   function renderOccupations(result) {
     if (!C.diagnosis.showOccupationSuggestions) return "";
 
-    const jobs = getOccupations(result);
+    const jobs = getOccupationSuggestions(result);
 
     if (!jobs.length) {
-      return section("仕事の可能性を考える", `
-        <p>今回の回答だけでは、職種を絞り込むための情報が十分ではありません。興味のある仕事内容や経験も合わせて考えてみましょう。</p>
+      return section("これからの仕事の選択肢", `
+        <p>
+          今回の回答だけでは、具体的な職種の候補を
+          十分に絞り込めませんでした。
+        </p>
+        <p>
+          これまでの経験や興味、働き方の希望も
+          あわせて考えてみましょう。
+        </p>
+        <div class="button-row" style="margin-top:20px">
+          <a href="${esc(C.jobsUrl)}"
+             class="btn btn-secondary">
+            求人サイトを見る →
+          </a>
+        </div>
       `);
     }
 
-    return section("あなたの強みを活かせそうな仕事の例", `
-      <p style="margin-bottom:20px">
-        強みの自己評価と仕事内容との関連性から、検討候補を表示しています。
-        適職の判定や求人の紹介を保証するものではありません。
+    return section("あなたの強みを活かせそうな仕事", `
+      <p style="margin-bottom:22px">
+        今回の回答から、強みを活かせる可能性のある
+        仕事をピックアップしました。
+        今まで考えたことのなかった仕事も、
+        選択肢のひとつとして見てみましょう。
       </p>
 
       <div class="occupation-grid">
         ${jobs.map(job => `
           <article class="occupation-card">
-            <span class="occupation-category">${esc(job.category)}</span>
+
+            <div class="occupation-category">
+              ${esc(job.category || "仕事の選択肢")}
+            </div>
+
             <h3>${esc(job.name)}</h3>
-            <p>${esc(job.description)}</p>
 
-            <div class="occupation-detail">
-              <strong>関連する強み</strong>
-              <p>${esc(job.related.map(a => a.short || a.name).join("・"))}</p>
-            </div>
+            ${textBlock(job.description)}
 
-            ${job.entry ? `
-              <div class="occupation-detail">
-                <strong>応募条件の目安</strong>
-                <p>${esc(job.entry)}</p>
-              </div>
-            ` : ""}
+            ${detailBlock(
+              "仕事への入り口",
+              job.entry
+            )}
 
-            <div class="occupation-detail">
-              <strong>求人選びの確認ポイント</strong>
-              <p>${esc(job.check || "具体的な業務内容や職場環境")}</p>
-            </div>
+            ${detailBlock(
+              "求人を見るときのポイント",
+              job.check
+            )}
 
             ${job.matchedRisks.length ? `
-              <div class="caution-box" style="margin-top:14px">
-                <strong>負担との相性も確認</strong>
-                <p>${esc(job.matchedRisks.map(a => a.name).join("・"))}</p>
+              <div class="caution-box"
+                   style="margin-top:16px">
+
+                <strong>確認しておきたいこと</strong>
+
+                <p style="margin-top:8px">
+                  苦手の傾向診断では、
+                  ${esc(job.matchedRisks.join("・"))}
+                  に負担を感じやすい傾向があります。
+                  実際の業務内容や職場環境も
+                  確認してみましょう。
+                </p>
+
               </div>
             ` : ""}
+
           </article>
         `).join("")}
       </div>
 
-      <p class="chart-note">
-        表示順は強みとの関連度を参考にしたもので、本人の希望や実際の能力、採用可能性の順位ではありません。
-      </p>
+      <div class="notice">
+        ここで紹介する職種は、
+        回答内容から考えられる選択肢の一例です。
+        職業適性や採用可能性を保証するものではなく、
+        現在募集中の求人を示すものでもありません。
+      </div>
 
-      <div class="button-row" style="margin-top:20px">
-        <a class="btn btn-secondary" href="${esc(C.jobsUrl)}">求人サイトを見る →</a>
+      <div class="button-row" style="margin-top:24px">
+        <a href="${esc(C.jobsUrl)}"
+           class="btn btn-secondary">
+          沿線キャリアで求人を探す →
+        </a>
       </div>
     `);
   }
@@ -1076,676 +1587,1500 @@
     const t = getTest(id);
     const result = state.results[id];
 
-    if (!t) return go("#tests");
-    if (!result) return go(`#test/${id}`);
+    if (!t) {
+      go("#tests");
+      return;
+    }
+
+    if (!result) {
+      go(`#test/${id}`);
+      return;
+    }
 
     showView("resultView");
+
     $("resultView").dataset.test = id;
 
-    const combo = id === "strength" ? strengthCombination(result) : null;
+    let content = "";
 
-    const titles = {
-      strength: combo?.title || "あなたの強みの傾向",
-      difficulty: "あなたが負担を感じやすい場面",
-      workstyle: "あなたらしく働ける環境",
-      values: "あなたが仕事で大切にしたいこと"
-    };
+    switch (id) {
+      case "strength":
+        content = renderStrength(result);
+        content += renderOccupations(result);
+        break;
 
-    const renderers = {
-      strength: renderStrength,
-      difficulty: renderDifficulty,
-      workstyle: renderWorkstyle,
-      values: renderValues
-    };
+      case "difficulty":
+        content = renderDifficulty(result);
+        break;
+
+      case "workstyle":
+        content = renderWorkstyle(result);
+        break;
+
+      case "values":
+        content = renderValues(result);
+        break;
+    }
+
+    const completed = tests.filter(
+      item => state.results[item.id]
+    ).length;
 
     $("resultContent").innerHTML = `
-      <a href="#tests" class="back-link">← 診断一覧へ</a>
+      <a href="#tests" class="back-link">
+        ← 診断一覧に戻る
+      </a>
 
       <div class="result-hero">
-        <div class="result-kicker">YOUR RESULT / TEST ${esc(t.number)}</div>
-        <div class="test-icon">${icons[id]}</div>
-        <h1 style="margin-top:18px">${esc(titles[id])}</h1>
-        <p class="result-description">
-          ${esc(combo?.description || t.description)}
-        </p>
-        <div class="chips" style="margin-top:18px">
-          <span class="chip">診断完了</span>
-          <span class="chip">${esc(new Date(result.completedAt).toLocaleDateString("ja-JP"))}</span>
+
+        <div class="result-kicker">
+          TEST ${esc(t.number)} / DIAGNOSIS RESULT
         </div>
+
+        <div class="test-icon">
+          ${icons[id]}
+        </div>
+
+        <h1 style="margin-top:18px">
+          ${esc(t.title)}の結果
+        </h1>
+
+        <p class="result-description">
+          お疲れさまでした！
+          自分について、ひとつ新しい発見ができました。
+        </p>
+
+        <div class="chips" style="margin-top:18px">
+          <span class="chip">診断完了 ✓</span>
+          <span class="chip">
+            ${completed} / ${tests.length} 診断完了
+          </span>
+        </div>
+
       </div>
 
-      ${renderers[id](result)}
+      <div class="next-action">
 
-      <div class="notice" style="margin-bottom:20px">
+        <h3>
+          ${recommended()
+            ? "次の診断も受けてみよう！"
+            : "すべての診断が完了しました！"}
+        </h3>
+
+        <p>
+          ${recommended()
+            ? "結果は保存されています。あとからいつでも見返せます。"
+            : "4つの診断結果をまとめて、自分だけのマイカルテを作りましょう。"}
+        </p>
+
+        <a href="${nextLink()}"
+           class="btn btn-primary">
+          ${esc(nextLabel())}
+        </a>
+
+      </div>
+
+      ${content}
+
+      <div class="notice">
         ${esc(C.disclaimer)}
       </div>
 
+      ${nextPanel()}
+
       <div class="result-section">
-        <h2>診断結果を活用する</h2>
-        <div class="button-row">
-          ${button("結果をコピー", "copy-result", id, "btn-secondary")}
-          ${button("印刷・PDF保存", "print", "", "btn-ghost")}
-          ${button("もう一度診断する", "restart", id, "btn-ghost")}
+
+        <h2>診断結果を保存する</h2>
+
+        <p>
+          診断結果は、このブラウザに保存されています。
+          テキストでコピーしたり、
+          印刷して残したりすることもできます。
+        </p>
+
+        <div class="button-row" style="margin-top:20px">
+
+          ${button(
+            "結果をコピーする",
+            "copy-result",
+            id,
+            "btn-secondary"
+          )}
+
+          ${button(
+            "印刷・PDF保存",
+            "print",
+            id,
+            "btn-secondary"
+          )}
+
+          ${button(
+            "もう一度診断する",
+            "restart",
+            id,
+            "btn-ghost"
+          )}
+
         </div>
+
       </div>
 
       <div class="consultation">
-        <h2>診断結果を、これからの働き方に。</h2>
-        <p>マイカルテに結果をまとめて、今後のキャリアを考えてみましょう。</p>
+
+        <h2>
+          診断結果を、これからのキャリアに。
+        </h2>
+
+        <p>
+          自分に合う仕事が分からない。
+          今の仕事を続けるか迷っている。
+          そんな段階からでもご相談いただけます。
+        </p>
+
         <div class="button-row">
-          <a href="#profile" class="btn btn-primary">マイカルテを見る →</a>
-          <a href="#tests" class="btn btn-secondary">他の診断を受ける</a>
+
+          <a href="#profile" class="btn btn-line">
+            マイカルテを使って相談する →
+          </a>
+
+          <a href="${esc(C.lineOfficialUrl)}"
+             class="btn btn-secondary"
+             target="_blank"
+             rel="noopener noreferrer">
+            カルテを共有せずに相談する
+          </a>
+
         </div>
+
       </div>
     `;
+
+    updateStickyNext();
   }
 
   /* =========================================
-     CAREER PROFILE
+     PROFILE OPTIONS
   ========================================= */
 
-  const profileFields = [
-    {
-      key: "age",
-      label: "年代",
-      options: ["10代", "20代前半", "20代後半", "30代", "40代", "50代", "60代以上"]
-    },
-    {
-      key: "employment",
-      label: "現在の就業状況",
-      options: ["学生", "正社員", "契約社員", "派遣社員", "アルバイト・パート", "業務委託・自営業", "離職中", "その他"]
-    },
-    {
-      key: "goals",
-      label: "これから実現したいこと",
-      multiple: true,
-      options: [
-        "収入を増やしたい",
-        "専門的なスキルを身につけたい",
-        "将来独立・起業したい",
-        "好きなことを仕事にしたい",
-        "生活とのバランスを大切にしたい",
-        "自宅の近くで穏やかに働きたい",
-        "人や地域の役に立ちたい",
-        "自分に自信を持ちたい",
-        "新しいことに挑戦したい",
-        "まだ決まっていない"
-      ]
-    },
-    {
-      key: "goalDetail",
-      label: "理想の生活・将来像",
-      textarea: true,
-      placeholder: "どんな毎日を過ごしたいか、自由に書いてみましょう。"
-    },
-    {
-      key: "concerns",
-      label: "現在の悩み・不安",
-      textarea: true,
-      placeholder: "仕事選び、人間関係、収入、将来への不安など"
-    },
-    {
-      key: "area",
-      label: "希望する勤務地",
-      multiple: true,
-      options: [
-        "東西線沿線で働きたい",
-        "条件次第で沿線外も検討したい",
-        "勤務地より仕事内容を重視したい",
-        "在宅勤務・リモートワークを希望",
-        "まだ決まっていない"
-      ]
-    },
-    {
-      key: "desiredEmployment",
-      label: "希望する雇用形態",
-      multiple: true,
-      options: ["正社員", "契約社員", "派遣社員", "アルバイト・パート", "業務委託", "こだわらない", "未定"]
-    },
-    {
-      key: "salary",
-      label: "希望する収入・待遇",
-      placeholder: "例：月給25万円以上、時給1,500円以上など"
-    },
-    {
-      key: "timing",
-      label: "就職・転職の希望時期",
-      options: ["すぐに", "3か月以内", "6か月以内", "1年以内", "良い仕事があれば", "情報収集中", "転職予定なし", "未定"]
-    },
-    {
-      key: "consultation",
-      label: "相談したいこと",
-      textarea: true,
-      placeholder: "キャリア相談で聞いてみたいことなど"
-    }
-  ];
+  const PROFILE_OPTIONS = {
 
-  function renderField(f) {
-    const value = state.profile[f.key] ?? "";
+    age: [
+      "18歳未満",
+      "18〜19歳",
+      "20〜24歳",
+      "25〜29歳",
+      "30〜34歳",
+      "35〜39歳",
+      "40〜49歳",
+      "50〜59歳",
+      "60歳以上",
+      "回答しない"
+    ],
 
-    let control = "";
+    employment: [
+      "学生",
+      "正社員",
+      "契約社員",
+      "派遣社員",
+      "パート・アルバイト",
+      "業務委託・フリーランス",
+      "自営業・経営者",
+      "現在は働いていない",
+      "その他",
+      "回答しない"
+    ],
 
-    if (f.multiple) {
-      const selected = Array.isArray(value) ? value : [];
+    goals: [
+      "収入を増やしたい",
+      "スキルや経験を身につけたい",
+      "将来は独立・起業したい",
+      "好きなことを仕事にしたい",
+      "仕事と生活を両立したい",
+      "自宅の近くで穏やかに働きたい",
+      "人の役に立つ仕事がしたい",
+      "自分に自信を持ちたい",
+      "長く続けられる仕事を見つけたい",
+      "まだ決まっていない"
+    ],
 
-      control = `
-        <div class="checkbox-grid">
-          ${f.options.map(option => `
-            <label class="check-option">
-              <input type="checkbox"
-                data-profile="${esc(f.key)}"
-                value="${esc(option)}"
-                ${selected.includes(option) ? "checked" : ""}>
-              <span>${esc(option)}</span>
-            </label>
-          `).join("")}
-        </div>
-      `;
-    } else if (f.options) {
-      control = `
-        <select id="profile-${f.key}" data-profile="${esc(f.key)}">
-          <option value="">選択しない</option>
-          ${f.options.map(option => `
-            <option value="${esc(option)}" ${value === option ? "selected" : ""}>
-              ${esc(option)}
-            </option>
-          `).join("")}
-        </select>
-      `;
-    } else if (f.textarea) {
-      control = `
-        <textarea id="profile-${f.key}"
-          data-profile="${esc(f.key)}"
-          maxlength="1000"
-          placeholder="${esc(f.placeholder)}">${esc(value)}</textarea>
-      `;
-    } else {
-      control = `
-        <input type="text"
-          id="profile-${f.key}"
-          data-profile="${esc(f.key)}"
-          maxlength="200"
-          value="${esc(value)}"
-          placeholder="${esc(f.placeholder)}">
-      `;
+    area: [
+      "東西線沿線で働きたい",
+      "条件が合えば他のエリアでも働きたい",
+      "勤務地にはあまりこだわらない",
+      "在宅・リモート勤務を希望",
+      "まだ決まっていない"
+    ],
+
+    desiredEmployment: [
+      "正社員",
+      "契約社員",
+      "派遣社員",
+      "パート・アルバイト",
+      "業務委託",
+      "こだわらない",
+      "まだ決まっていない"
+    ],
+
+    salary: [
+      "特に希望なし",
+      "月収20万円未満",
+      "月収20〜25万円",
+      "月収25〜30万円",
+      "月収30〜35万円",
+      "月収35〜40万円",
+      "月収40万円以上",
+      "時給・日給で考えたい",
+      "まだ決まっていない"
+    ],
+
+    timing: [
+      "すぐにでも働きたい・転職したい",
+      "3か月以内",
+      "半年以内",
+      "半年〜1年以内",
+      "良い仕事があれば考えたい",
+      "今は情報収集したい",
+      "転職予定はない",
+      "まだ決まっていない"
+    ],
+
+    consultation: [
+      "自分に合う仕事を知りたい",
+      "求人を紹介してほしい",
+      "キャリアについて相談したい",
+      "今の仕事を続けるか相談したい",
+      "診断結果について相談したい",
+      "まだ相談内容が決まっていない",
+      "今は相談を希望しない"
+    ]
+
+  };
+
+  /* =========================================
+     PROFILE FORM HELPERS
+  ========================================= */
+
+  function selectField(key, label, options) {
+    const value = state.profile[key] || "";
+
+    const choices = [...options];
+
+    if (value && !choices.includes(value)) {
+      choices.push(value);
     }
 
     return `
       <div class="form-group">
-        <label class="field-label" ${f.multiple ? "" : `for="profile-${f.key}"`}>
-          ${esc(f.label)}
+
+        <label class="field-label"
+               for="profile-${esc(key)}">
+          ${esc(label)}
           <span class="small muted">（任意）</span>
         </label>
-        ${control}
+
+        <select id="profile-${esc(key)}"
+                data-profile="${esc(key)}">
+
+          <option value="">選択してください</option>
+
+          ${choices.map(item => `
+            <option value="${esc(item)}"
+                    ${item === value ? "selected" : ""}>
+              ${esc(item)}
+            </option>
+          `).join("")}
+
+        </select>
+
       </div>
     `;
   }
 
-  function renderProfile() {
-    showView("profileView");
+  function checkboxField(key, label, options) {
+    const selected = Array.isArray(state.profile[key])
+      ? state.profile[key]
+      : [];
 
-    const completed = tests.filter(t => state.results[t.id]).length;
+    const choices = [...new Set([
+      ...options,
+      ...selected
+    ])];
 
-    $("profileContent").innerHTML = `
-      <a href="#home" class="back-link">← ホームへ</a>
+    return `
+      <div class="form-group">
 
-      <div class="result-hero theme-strength">
-        <div class="result-kicker">MY CAREER PROFILE</div>
-        <h1>マイキャリアカルテ</h1>
-        <p class="result-description">
-          診断結果と、これからの希望をひとつにまとめる、あなた専用のキャリアカルテです。
-        </p>
-        <div class="chips" style="margin-top:18px">
-          <span class="chip">${completed} / 4診断 完了</span>
-          <span class="chip">入力内容は端末内に保存</span>
+        <div class="field-label">
+          ${esc(label)}
+          <span class="small muted">
+            （任意・複数選択可）
+          </span>
         </div>
-      </div>
 
-      ${section("自己分析の結果", `
-        <div class="karte-summary">${renderSummary()}</div>
-      `)}
+        <div class="checkbox-grid">
 
-      ${renderIntegratedSummary()}
+          ${choices.map(item => `
+            <label class="check-option">
 
-      <div class="result-section">
-        <h2>これからのキャリアについて</h2>
-        <p class="muted small" style="margin-bottom:24px">
-          すべて任意です。まだ分からない項目は空欄のままで大丈夫です。
-          氏名・住所などの個人情報は入力しないでください。
-        </p>
-        ${profileFields.map(renderField).join("")}
-        <div class="notice" id="profileSaveStatus">
-          入力内容は変更するたびに保存されます。
+              <input type="checkbox"
+                     data-profile="${esc(key)}"
+                     value="${esc(item)}"
+                     ${selected.includes(item)
+                       ? "checked"
+                       : ""}>
+
+              <span>${esc(item)}</span>
+
+            </label>
+          `).join("")}
+
         </div>
+
       </div>
+    `;
+  }
 
-      ${state.results.strength
-        ? renderOccupations(state.results.strength)
-        : ""}
+  function textareaField(key, label, placeholder = "") {
+    return `
+      <div class="form-group">
 
-      <div class="result-section">
-        <h2>カルテを保存・共有する</h2>
-        <p style="margin-bottom:18px">
-          内容を確認してからコピーできます。運営会社へ自動送信されることはありません。
-        </p>
-
-        <textarea id="sharePreview"
-          class="share-preview"
-          aria-label="共有するカルテの内容"
-          style="min-height:280px">${esc(profileText())}</textarea>
-
-        <div class="button-row" style="margin-top:20px">
-          ${button("カルテをコピー", "copy-profile", "", "btn-primary")}
-          ${button("印刷・PDF保存", "print", "", "btn-secondary")}
-        </div>
-      </div>
-
-      <div class="consultation">
-        <h2>あなたのこれからを、一緒に考える。</h2>
-        <p>
-          沿線キャリアでは、転職予定がない方も無料でご相談いただけます。
-          診断結果や将来の希望をもとに、仕事の選択肢を一緒に考えます。
-        </p>
-
-        <label class="check-option" style="margin-top:20px;background:#fff">
-          <input type="checkbox" id="shareConsent">
-          <span>共有する内容を確認しました。自分の意思でLINEに送信します。</span>
+        <label class="field-label"
+               for="profile-${esc(key)}">
+          ${esc(label)}
+          <span class="small muted">（任意）</span>
         </label>
 
-        <div class="button-row">
-          ${button("カルテをコピーしてLINEを開く", "share-line", "", "btn-line btn-block")}
-        </div>
+        <textarea id="profile-${esc(key)}"
+                  data-profile="${esc(key)}"
+                  placeholder="${esc(placeholder)}">${esc(state.profile[key] || "")}</textarea>
 
-        <p class="small" style="margin-top:12px">
-          LINEを開いた後、トーク画面にコピーした内容を貼り付けて送信してください。
-        </p>
-      </div>
-
-      <div class="result-section" style="margin-top:24px">
-        <h2>データの取り扱い</h2>
-        <p>
-          診断結果やカルテは、このブラウザ内に保存されます。
-          共有操作をしない限り、診断内容は運営会社に自動送信されません。
-          共用端末をご利用の場合は、利用後に保存データを削除してください。
-        </p>
-        <p class="small muted" style="margin-top:12px">
-          ${esc(C.disclaimer)}
-        </p>
-        <div class="button-row" style="margin-top:18px">
-          ${button("保存データをすべて削除する", "delete-all", "", "btn-ghost")}
-        </div>
       </div>
     `;
-  }
-
-  function renderIntegratedSummary() {
-    const strength = state.results.strength;
-    const difficulty = state.results.difficulty;
-    const workstyle = state.results.workstyle;
-    const values = state.results.values;
-
-    if (!strength && !difficulty && !workstyle && !values) {
-      return section("あなたの特徴", `
-        <p>診断を受けると、ここに結果が集約されます。すべての診断を受ける必要はありません。</p>
-      `);
-    }
-
-    let html = "";
-
-    if (strength) {
-      const top = topAxes(strength.scores, 3);
-      html += textBlock("自覚している強み",
-        top.length ? top.map(a => a.name) : "突出した高い自己評価は見られませんでした。"
-      );
-    }
-
-    if (difficulty) {
-      const top = topAxes(difficulty.scores, 3);
-      html += textBlock("負担を感じやすい場面",
-        top.length ? top.map(a => a.name) : "特に強い負担傾向は見られませんでした。"
-      );
-    }
-
-    if (workstyle) {
-      html += textBlock("働き方の好み",
-        workstyle.scores.map(a => `${a.name}：${workstyleLabel(a)}`)
-      );
-    }
-
-    if (values) {
-      html += textBlock("大切にしたい価値観",
-        values.priorities.length
-          ? values.priorities.map((id, i) => {
-            const a = values.scores.find(x => x.id === id);
-            return `${i + 1}位：${a?.name || id}`;
-          })
-          : "優先順位は未設定です。"
-      );
-    }
-
-    html += `
-      <div class="insight" style="margin-top:20px">
-        <p>
-          得意なことと、好きなことは必ずしも一致しません。
-          強みを活かせることに加え、負担や価値観との相性も考えて仕事を選びましょう。
-        </p>
-      </div>
-    `;
-
-    return section("4つの視点から見たあなた", html);
   }
 
   /* =========================================
-     TEXT EXPORT
+     RESULT TEXT
   ========================================= */
 
   function resultText(id) {
     const t = getTest(id);
-    const r = state.results[id];
+    const result = state.results[id];
 
-    if (!t || !r) return "";
+    if (!t || !result) {
+      return `${t?.title || id}：未診断`;
+    }
 
     const lines = [
-      `【${t.title}】`,
-      resultHeadline(id),
-      ""
+      `【${t.title}】`
     ];
 
-    r.scores.forEach(a => {
-      if (id === "workstyle") {
-        lines.push(`・${a.name}：${workstyleLabel(a)}`);
+    if (id === "strength") {
+
+      const top = topAxes(result.scores);
+
+      lines.push(
+        "強みの傾向：" +
+        (top.length
+          ? top.map(a => a.name).join("、")
+          : "明確な上位項目なし・判断保留を含む")
+      );
+
+    }
+
+    if (id === "difficulty") {
+
+      const high = topAxes(result.scores, 3, 3);
+
+      lines.push(
+        "負担を感じやすい場面：" +
+        (high.length
+          ? high.map(a => a.name).join("、")
+          : "明確な上位項目なし・判断保留を含む")
+      );
+
+    }
+
+    if (id === "values") {
+
+      const priorities = (result.priorities || [])
+        .map(axisId =>
+          result.scores.find(a => a.id === axisId)
+        )
+        .filter(Boolean);
+
+      lines.push("大切にしたい価値観：");
+
+      if (priorities.length) {
+
+        priorities.forEach((a, i) => {
+          lines.push(`${i + 1}位：${a.name}`);
+        });
+
       } else {
-        lines.push(`・${a.name}：${a.score === null ? "未判断" : `${a.score}/100`}`);
+
+        lines.push("優先順位は未設定");
+
       }
+
+    }
+
+    lines.push("");
+
+    result.scores.forEach(a => {
+
+      if (id === "workstyle") {
+
+        lines.push(
+          `・${a.name}：${workstyleDirection(a).label}`
+        );
+
+      } else {
+
+        lines.push(
+          `・${a.name}：${
+            a.score === null
+              ? "判断保留"
+              : `${a.score}/100`
+          }`
+        );
+
+      }
+
     });
 
-    if (id === "values" && r.priorities.length) {
-      lines.push("", "〈優先順位〉");
-      r.priorities.forEach((key, i) => {
-        const a = r.scores.find(x => x.id === key);
-        if (a) lines.push(`${i + 1}位：${a.name}`);
-      });
+    if (id === "strength") {
+
+      const jobs = getOccupationSuggestions(result);
+
+      if (jobs.length) {
+
+        lines.push("");
+        lines.push(
+          "仕事の選択肢：" +
+          jobs.map(job => job.name).join("、")
+        );
+
+      }
+
     }
 
     return lines.join("\n");
   }
 
+  /* =========================================
+     CAREER PROFILE TEXT
+  ========================================= */
+
   function profileText() {
+    const p = state.profile;
+
+    const format = value => {
+
+      if (Array.isArray(value)) {
+        return value.length
+          ? value.join("、")
+          : "未入力";
+      }
+
+      return value || "未入力";
+
+    };
+
     const lines = [
       "【沿線キャリア マイキャリアカルテ】",
       "",
-      "■自己分析結果"
+      "■ 基本情報",
+      `年齢層：${format(p.age)}`,
+      `現在の就業状況：${format(p.employment)}`,
+      "",
+      "■ 自己分析の結果",
+      ""
     ];
 
     tests.forEach(t => {
+      lines.push(resultText(t.id));
       lines.push("");
-      lines.push(state.results[t.id] ? resultText(t.id) : `【${t.title}】未診断`);
-    });
-
-    lines.push("", "■これからのキャリアについて");
-
-    profileFields.forEach(f => {
-      const v = state.profile[f.key];
-
-      if (Array.isArray(v) && v.length) {
-        lines.push("", `【${f.label}】`, v.join("、"));
-      } else if (typeof v === "string" && v.trim()) {
-        lines.push("", `【${f.label}】`, v.trim());
-      }
     });
 
     lines.push(
+      "■ これからのキャリア",
+      `将来の希望：${format(p.goals)}`,
+      `詳しい希望：${format(p.goalDetail)}`,
+      `現在の悩み：${format(p.concerns)}`,
       "",
-      "※自己分析結果は本人の回答に基づく参考情報です。",
+      "■ 希望条件",
+      `希望エリア：${format(p.area)}`,
+      `希望雇用形態：${format(p.desiredEmployment)}`,
+      `希望給与：${format(p.salary)}`,
+      `希望時期：${format(p.timing)}`,
       "",
-      C.siteName,
+      "■ 相談したいこと",
+      format(p.consultation),
+      "",
+      "※自己回答に基づく診断結果です。",
+      C.disclaimer || "",
+      "",
       C.siteUrl
     );
 
     return lines.join("\n");
   }
 
-  async function copyText(text) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch (e) {
-      const area = document.createElement("textarea");
-      area.value = text;
-      area.style.position = "fixed";
-      area.style.opacity = "0";
-      document.body.appendChild(area);
-      area.select();
+  /* =========================================
+     PROFILE PAGE
+  ========================================= */
 
-      let success = false;
+  function renderProfile() {
+    showView("profileView");
 
-      try {
-        success = document.execCommand("copy");
-      } catch (err) {
-        success = false;
-      }
+    $("profileView").dataset.test = "strength";
 
-      area.remove();
-      return success;
-    }
-  }
+    const completed = tests.filter(
+      t => state.results[t.id]
+    ).length;
 
-  async function copyProfile() {
-    const preview = $("sharePreview");
-    const text = preview ? preview.value : profileText();
-    const success = await copyText(text);
+    $("profileContent").innerHTML = `
+      <a href="#home" class="back-link">
+        ← ホームに戻る
+      </a>
 
-    if (success) {
-      toast("カルテをコピーしました。");
-    } else {
-      if (preview) {
-        preview.focus();
-        preview.select();
-      }
-      toast("自動コピーできませんでした。内容を手動でコピーしてください。");
-    }
+      <div class="result-hero theme-strength">
 
-    return success;
-  }
+        <div class="result-kicker">
+          MY CAREER PROFILE
+        </div>
 
-  async function shareLine() {
-    if (!$("shareConsent")?.checked) {
-      toast("共有内容を確認し、チェックを入れてください。");
-      return;
-    }
+        <h1>マイキャリアカルテ</h1>
 
-    const success = await copyProfile();
+        <p class="result-description">
+          自分の強み、苦手なこと、働き方、
+          大切にしたい価値観。
+          これからのキャリアを考えるための
+          あなただけのカルテです。
+        </p>
 
-    if (success) {
-      location.href = C.lineOfficialUrl;
-    }
+        <div class="chips" style="margin-top:18px">
+          <span class="chip">
+            ${completed} / ${tests.length} 診断完了
+          </span>
+          <span class="chip">登録不要</span>
+          <span class="chip">端末内に保存</span>
+        </div>
+
+      </div>
+
+      ${journey()}
+
+      <div class="result-section">
+
+        <h2>あなたの自己分析結果</h2>
+
+        <div class="karte-summary">
+          ${renderKarteSummary()}
+        </div>
+
+        <p class="small muted" style="margin-top:18px">
+          診断名を選ぶと、詳しい結果を確認できます。
+          すべての診断を受けていなくても、
+          カルテの作成や相談が可能です。
+        </p>
+
+      </div>
+
+      <div class="result-section">
+
+        <h2>あなたについて</h2>
+
+        <p style="margin-bottom:24px">
+          回答できる項目だけ入力してください。
+          すべて任意です。
+        </p>
+
+        ${selectField(
+          "age",
+          "年齢層",
+          PROFILE_OPTIONS.age
+        )}
+
+        ${selectField(
+          "employment",
+          "現在の就業状況",
+          PROFILE_OPTIONS.employment
+        )}
+
+      </div>
+
+      <div class="result-section">
+
+        <h2>どんな自分になりたい？</h2>
+
+        <p style="margin-bottom:24px">
+          仕事を通じて実現したいことや、
+          これからの生活について考えてみましょう。
+          まだ決まっていなくても大丈夫です。
+        </p>
+
+        ${checkboxField(
+          "goals",
+          "これから実現したいこと",
+          PROFILE_OPTIONS.goals
+        )}
+
+        ${textareaField(
+          "goalDetail",
+          "将来の希望・なりたい自分",
+          "例：自宅の近くで働きながら、趣味や家族との時間も大切にしたい。"
+        )}
+
+        ${textareaField(
+          "concerns",
+          "現在の悩みや不安",
+          "例：今の仕事が自分に合っているか分からない。"
+        )}
+
+      </div>
+
+      <div class="result-section">
+
+        <h2>希望する働き方・条件</h2>
+
+        <p style="margin-bottom:24px">
+          現時点での希望を教えてください。
+          あとから変更することもできます。
+        </p>
+
+        ${checkboxField(
+          "area",
+          "希望する勤務地・エリア",
+          PROFILE_OPTIONS.area
+        )}
+
+        ${checkboxField(
+          "desiredEmployment",
+          "希望する雇用形態",
+          PROFILE_OPTIONS.desiredEmployment
+        )}
+
+        ${selectField(
+          "salary",
+          "希望する給与",
+          PROFILE_OPTIONS.salary
+        )}
+
+        ${selectField(
+          "timing",
+          "就職・転職の希望時期",
+          PROFILE_OPTIONS.timing
+        )}
+
+      </div>
+
+      <div class="result-section">
+
+        <h2>相談したいこと</h2>
+
+        ${selectField(
+          "consultation",
+          "現在のご希望",
+          PROFILE_OPTIONS.consultation
+        )}
+
+        <p id="profileSaveStatus"
+           role="status">
+          ${storageAvailable
+            ? "入力内容はこのブラウザに保存されます。"
+            : "端末への保存ができない状態です。"}
+        </p>
+
+      </div>
+
+      <div class="result-section">
+
+        <h2>マイカルテの内容を確認する</h2>
+
+        <p style="margin-bottom:18px">
+          診断結果と入力内容をまとめました。
+          必要に応じて文章を編集できます。
+        </p>
+
+        <textarea id="sharePreview"
+                  class="share-preview"
+                  aria-label="マイカルテの共有内容">${esc(profileText())}</textarea>
+
+        <div class="button-row"
+             style="margin-top:20px">
+
+          ${button(
+            "カルテをコピーする",
+            "copy-profile",
+            "",
+            "btn-secondary"
+          )}
+
+          ${button(
+            "印刷・PDF保存",
+            "print",
+            "",
+            "btn-secondary"
+          )}
+
+        </div>
+
+      </div>
+
+      <div class="consultation">
+
+        <h2>マイカルテを使って無料相談</h2>
+
+        <p>
+          自己分析の結果をもとに、
+          あなたに合った仕事や
+          これからのキャリアを一緒に考えます。
+          転職予定がなくてもご相談いただけます。
+        </p>
+
+        <div class="notice"
+             style="background:#FFFFFF;margin-bottom:20px">
+
+          <strong>LINEでの相談方法</strong>
+
+          <ol style="padding-left:22px">
+
+            <li>
+              上のマイカルテの内容を確認してください。
+            </li>
+
+            <li>
+              下のボタンからカルテをコピーして、
+              LINEを開きます。
+            </li>
+
+            <li>
+              LINEのトーク画面に貼り付けて
+              送信してください。
+            </li>
+
+          </ol>
+
+          <p class="small muted" style="margin:0">
+            カルテが自動で送信されることはありません。
+            共有したくない情報は、
+            事前に削除・編集できます。
+          </p>
+
+        </div>
+
+        <label class="check-option"
+               style="margin-bottom:18px">
+
+          <input type="checkbox"
+                 id="shareConsent">
+
+          <span>
+            カルテの共有内容を確認しました
+          </span>
+
+        </label>
+
+        <div class="stack">
+
+          <button type="button"
+                  id="shareLineButton"
+                  class="btn btn-line btn-block btn-lg"
+                  data-action="share-line"
+                  disabled>
+            カルテをコピーしてLINEで相談する →
+          </button>
+
+          <a href="${esc(C.lineOfficialUrl)}"
+             class="btn btn-secondary btn-block"
+             target="_blank"
+             rel="noopener noreferrer">
+            カルテを共有せずに相談する
+          </a>
+
+        </div>
+
+        <p class="small muted"
+           style="margin:18px 0 0">
+          相談は無料です。
+          求人への応募や転職を強制することはありません。
+        </p>
+
+      </div>
+
+      <div class="result-section"
+           style="margin-top:24px">
+
+        <h2>データの保存について</h2>
+
+        <p>
+          診断結果とカルテの入力内容は、
+          ご利用中のブラウザに保存されます。
+          このサイトから運営者へ自動送信することはありません。
+        </p>
+
+        <p>
+          ブラウザのデータを削除した場合や、
+          別の端末・ブラウザを利用した場合は、
+          保存内容を引き継げないことがあります。
+          共用端末での利用にもご注意ください。
+        </p>
+
+        <div class="danger-zone"
+             style="margin-top:20px">
+
+          <strong>保存データの削除</strong>
+
+          <p style="margin:10px 0 16px">
+            すべての診断結果・途中回答・カルテの
+            入力内容を、このブラウザから削除できます。
+            削除後は元に戻せません。
+          </p>
+
+          ${button(
+            "保存データをすべて削除する",
+            "delete-all",
+            "",
+            "btn-ghost"
+          )}
+
+        </div>
+
+      </div>
+
+      <div class="notice">
+        ${esc(C.disclaimer)}
+      </div>
+    `;
+
+    updateStickyNext();
   }
 
   /* =========================================
-     PROFILE AUTO SAVE
+     PROFILE SAVE
   ========================================= */
 
-  document.addEventListener("input", event => {
-    const el = event.target;
+  function resetShareConsent() {
+    const consent = $("shareConsent");
+    const shareButton = $("shareLineButton");
+
+    if (consent) consent.checked = false;
+    if (shareButton) shareButton.disabled = true;
+  }
+
+  function updateProfileField(el) {
     const key = el.dataset.profile;
 
     if (!key) return;
 
     if (el.type === "checkbox") {
-      const values = Array.from(
-        document.querySelectorAll(`[data-profile="${key}"]:checked`)
-      ).map(input => input.value);
 
-      state.profile[key] = values;
+      const selected = [
+        ...document.querySelectorAll(
+          "[data-profile]"
+        )
+      ].filter(item =>
+        item.dataset.profile === key &&
+        item.type === "checkbox" &&
+        item.checked
+      ).map(item => item.value);
+
+      state.profile[key] = selected;
+
     } else {
+
       state.profile[key] = el.value;
+
     }
 
     const saved = save();
 
-    if ($("profileSaveStatus")) {
-      $("profileSaveStatus").textContent = saved
-        ? "入力内容を保存しました。"
-        : "端末への保存ができませんでした。";
+    const status = $("profileSaveStatus");
+
+    if (status) {
+
+      status.textContent = saved
+        ? "✓ 入力内容を保存しました"
+        : "端末への保存ができませんでした";
+
     }
 
-    if ($("sharePreview")) {
-      $("sharePreview").value = profileText();
+    const preview = $("sharePreview");
+
+    if (preview) {
+      preview.value = profileText();
     }
 
-    if ($("shareConsent")) {
-      $("shareConsent").checked = false;
-    }
-  });
+    resetShareConsent();
+  }
 
   /* =========================================
-     ACTION HANDLER
+     COPY
   ========================================= */
 
-  document.addEventListener("click", async event => {
-    const el = event.target.closest("[data-action]");
-    if (!el) return;
+  async function copyText(value) {
+    const text = String(value || "");
 
-    const action = el.dataset.action;
-    const id = el.dataset.id;
+    if (!text.trim()) {
+      toast("コピーする内容がありません。");
+      return false;
+    }
 
-    switch (action) {
-      case "start":
-        startTest(id);
-        break;
+    try {
 
-      case "restart":
-        if (confirm("最初から回答しますか？ 保存済みの診断結果は、新しい診断が完了するまで残ります。")) {
-          startTest(id, true);
-        }
-        break;
+      if (navigator.clipboard &&
+          window.isSecureContext) {
 
-      case "answer":
-        selectAnswer(Number(id));
-        break;
+        await navigator.clipboard.writeText(text);
 
-      case "priority":
-        togglePriority(id);
-        break;
+        return true;
 
-      case "finish":
-        finishTest();
-        break;
-
-      case "back-quiz":
-        renderQuiz();
-        break;
-
-      case "result":
-        go(`#result/${id}`);
-        break;
-
-      case "copy-result": {
-        const success = await copyText(
-          resultText(id) + "\n\n" + C.disclaimer + "\n" + C.siteUrl
-        );
-
-        toast(success
-          ? "診断結果をコピーしました。"
-          : "コピーできませんでした。画面上の文章を手動でコピーしてください。");
-        break;
       }
 
-      case "copy-profile":
-        await copyProfile();
-        break;
-
-      case "share-line":
-        await shareLine();
-        break;
-
-      case "print":
-        window.print();
-        break;
-
-      case "delete-all":
-        if (confirm("すべての診断結果・回答・カルテを削除します。この操作は元に戻せません。よろしいですか？")) {
-          try {
-            localStorage.removeItem(KEY);
-            state = emptyState();
-            activeTest = null;
-            answers = {};
-            priorities = [];
-            step = 0;
-            renderProfile();
-            toast("保存データを削除しました。");
-          } catch (e) {
-            toast("保存データを削除できませんでした。");
-          }
-        }
-        break;
+    } catch (e) {
+      console.warn(e);
     }
-  });
+
+    const textarea = document.createElement("textarea");
+
+    textarea.value = text;
+
+    textarea.setAttribute("readonly", "");
+
+    textarea.style.position = "fixed";
+    textarea.style.top = "0";
+    textarea.style.left = "0";
+    textarea.style.opacity = "0";
+    textarea.style.pointerEvents = "none";
+
+    document.body.appendChild(textarea);
+
+    textarea.focus();
+    textarea.select();
+
+    textarea.setSelectionRange(
+      0,
+      textarea.value.length
+    );
+
+    let success = false;
+
+    try {
+
+      success = document.execCommand("copy");
+
+    } catch (e) {
+
+      console.warn(e);
+
+    } finally {
+
+      textarea.remove();
+
+    }
+
+    return success;
+  }
+
+  async function copyResult(id) {
+    if (!state.results[id]) return;
+
+    const text = [
+      "【沿線キャリア 自己分析ラボ】",
+      "",
+      resultText(id),
+      "",
+      C.disclaimer || "",
+      "",
+      C.siteUrl
+    ].join("\n");
+
+    const copied = await copyText(text);
+
+    toast(
+      copied
+        ? "診断結果をコピーしました！"
+        : "コピーできませんでした。ブラウザの設定をご確認ください。"
+    );
+  }
+
+  async function copyProfile() {
+    const preview = $("sharePreview");
+
+    const text = preview
+      ? preview.value
+      : profileText();
+
+    const copied = await copyText(text);
+
+    if (copied) {
+
+      toast("マイカルテをコピーしました！");
+
+    } else {
+
+      if (preview) {
+
+        preview.focus();
+        preview.select();
+
+      }
+
+      toast(
+        "自動コピーできませんでした。文章を選択してコピーしてください。"
+      );
+
+    }
+
+    return copied;
+  }
+
+  async function shareLine() {
+    const consent = $("shareConsent");
+    const shareButton = $("shareLineButton");
+    const preview = $("sharePreview");
+
+    if (!consent?.checked) {
+
+      toast("カルテの共有内容をご確認ください。");
+      return;
+
+    }
+
+    const text = preview
+      ? preview.value
+      : profileText();
+
+    if (!text.trim()) {
+
+      toast("共有するカルテの内容がありません。");
+      return;
+
+    }
+
+    if (shareButton) shareButton.disabled = true;
+
+    const copied = await copyText(text);
+
+    if (!copied) {
+
+      if (preview) {
+
+        preview.focus();
+        preview.select();
+
+      }
+
+      toast(
+        "コピーできませんでした。文章を手動でコピーしてください。"
+      );
+
+      if (shareButton) {
+
+        shareButton.disabled = !consent.checked;
+
+      }
+
+      return;
+
+    }
+
+    if (!consent.checked ||
+        (preview && preview.value !== text)) {
+
+      toast("共有内容をもう一度ご確認ください。");
+
+      resetShareConsent();
+
+      return;
+
+    }
+
+    toast(
+      "カルテをコピーしました。LINEのトーク画面に貼り付けてください。"
+    );
+
+    window.location.href = C.lineOfficialUrl;
+  }
+
+  /* =========================================
+     DELETE DATA
+  ========================================= */
+
+  function deleteAllData() {
+    const confirmed = confirm(
+      "すべての診断結果・途中回答・マイカルテの入力内容を削除しますか？\n\n削除したデータは元に戻せません。"
+    );
+
+    if (!confirmed) return;
+
+    try {
+
+      localStorage.removeItem(KEY);
+
+    } catch (e) {
+
+      toast(
+        "保存データを削除できませんでした。ブラウザの設定をご確認ください。"
+      );
+
+      return;
+
+    }
+
+    state = emptyState();
+
+    activeTest = null;
+    answers = {};
+    priorities = [];
+    step = 0;
+
+    renderProfile();
+
+    toast("保存データを削除しました。");
+  }
+
+  /* =========================================
+     STICKY NEXT ACTION
+  ========================================= */
+
+  function updateStickyNext() {
+    let el = $("stickyNext");
+
+    if (!el) {
+
+      el = document.createElement("div");
+
+      el.id = "stickyNext";
+      el.className = "sticky-next";
+      el.hidden = true;
+
+      document.body.appendChild(el);
+
+    }
+
+    const hash = location.hash || "#home";
+
+    const isResult = hash.startsWith("#result/");
+
+    const visible = isResult &&
+      !$("resultView").hidden;
+
+    el.hidden = !visible;
+
+    document.body.classList.toggle(
+      "has-sticky-next",
+      visible
+    );
+
+    if (visible) {
+
+      el.innerHTML = `
+        <a class="btn btn-primary"
+           href="${nextLink()}">
+          ${esc(nextLabel())}
+        </a>
+      `;
+
+    } else {
+
+      el.innerHTML = "";
+
+    }
+  }
+
+  /* =========================================
+     ACTIVE NAVIGATION
+  ========================================= */
+
+  function updateNavigation() {
+    const hash = location.hash || "#home";
+
+    let current = "#home";
+
+    if (hash === "#profile") {
+
+      current = "#profile";
+
+    } else if (
+      hash === "#tests" ||
+      hash.startsWith("#test/") ||
+      hash.startsWith("#quiz/") ||
+      hash.startsWith("#result/")
+    ) {
+
+      current = "#tests";
+
+    } else if (hash === "#about") {
+
+      current = "#about";
+
+    }
+
+    document.querySelectorAll(
+      ".header-nav a, .mobile-nav a"
+    ).forEach(link => {
+
+      const active =
+        link.getAttribute("href") === current;
+
+      link.classList.toggle("active", active);
+
+      if (active) {
+
+        link.setAttribute("aria-current", "page");
+
+      } else {
+
+        link.removeAttribute("aria-current");
+
+      }
+
+    });
+  }
 
   /* =========================================
      ROUTING
   ========================================= */
 
   function route() {
-    const hash = location.hash.replace(/^#/, "") || "home";
-    const [page, id] = hash.split("/");
+    const hash = location.hash || "#home";
 
-    document.querySelectorAll(".mobile-nav a").forEach(a => {
-      const href = a.getAttribute("href");
-      a.classList.toggle("active",
-        href === `#${page}` ||
-        (href === "#tests" && ["test", "quiz", "result"].includes(page))
-      );
-    });
+    const parts = hash.slice(1).split("/");
+
+    const page = parts[0];
+    const id = parts[1];
 
     switch (page) {
-      case "test":
-        renderIntro(id);
-        break;
-
-      case "quiz": {
-        const t = getTest(id);
-        if (!t) return go("#tests");
-
-        activeTest = t;
-
-        const p = state.progress[id] || {};
-        answers = { ...(p.answers || {}) };
-        priorities = [...(p.priorities || [])];
-        step = Math.max(0, Math.min(
-          Number.isInteger(p.step) ? p.step : 0,
-          t.questions.length - 1
-        ));
-
-        renderQuiz();
-        break;
-      }
-
-      case "result":
-        renderResult(id);
-        break;
-
-      case "profile":
-        renderProfile();
-        break;
 
       case "home":
       case "tests":
       case "about":
-      default:
+
         showView("homeView");
+
         renderHome();
 
-        if (page === "tests" || page === "about") {
+        if (page !== "home") {
+
           requestAnimationFrame(() => {
-            $(page)?.scrollIntoView({ behavior: "smooth" });
+
+            const target = $(page);
+
+            if (target &&
+                location.hash === hash) {
+
+              target.scrollIntoView({
+                behavior: "auto",
+                block: "start"
+              });
+
+            }
+
           });
+
         }
+
         break;
+
+      case "test":
+
+        renderIntro(id);
+        break;
+
+      case "quiz":
+
+        loadQuiz(id);
+        break;
+
+      case "result":
+
+        renderResult(id);
+        break;
+
+      case "profile":
+
+        renderProfile();
+        break;
+
+      default:
+
+        go("#home");
+        return;
+
     }
+
+    updateNavigation();
+    updateStickyNext();
   }
 
-  window.addEventListener("hashchange", route);
+  /* =========================================
+     EVENT DELEGATION
+  ========================================= */
+
+  document.addEventListener("click", event => {
+
+    const el = event.target.closest("[data-action]");
+
+    if (!el || el.disabled) return;
+
+    const action = el.dataset.action;
+    const id = el.dataset.id || "";
+
+    switch (action) {
+
+      case "start":
+
+        startTest(id);
+        break;
+
+      case "restart":
+
+        startTest(id, true);
+        break;
+
+      case "answer":
+
+        selectAnswer(Number(id));
+        break;
+
+      case "slider-answer":
+
+        setSliderAnswer(Number(id));
+        break;
+
+      case "slider-unknown":
+
+        setSliderAnswer(null);
+        break;
+
+      case "priority":
+
+        togglePriority(id);
+        break;
+
+      case "finish":
+
+        finishTest();
+        break;
+
+      case "back-quiz":
+
+        renderQuiz();
+        break;
+
+      case "result":
+
+        go(`#result/${id}`);
+        break;
+
+      case "copy-result":
+
+        copyResult(id);
+        break;
+
+      case "copy-profile":
+
+        copyProfile();
+        break;
+
+      case "share-line":
+
+        shareLine();
+        break;
+
+      case "print":
+
+        window.print();
+        break;
+
+      case "delete-all":
+
+        deleteAllData();
+        break;
+
+      case "recommended":
+
+        go(nextLink());
+        break;
+
+    }
+
+  });
+
+  document.addEventListener("input", event => {
+
+    const el = event.target;
+
+    if (el.id === "sharePreview") {
+
+      resetShareConsent();
+      return;
+
+    }
+
+    if (
+      el.dataset.profile &&
+      el.type !== "checkbox" &&
+      el.tagName !== "SELECT"
+    ) {
+
+      updateProfileField(el);
+
+    }
+
+  });
+
+  document.addEventListener("change", event => {
+
+    const el = event.target;
+
+    if (el.id === "shareConsent") {
+
+      const shareButton = $("shareLineButton");
+
+      if (shareButton) {
+
+        shareButton.disabled = !el.checked;
+
+      }
+
+      return;
+
+    }
+
+    if (
+      el.dataset.profile &&
+      (
+        el.type === "checkbox" ||
+        el.tagName === "SELECT"
+      )
+    ) {
+
+      updateProfileField(el);
+
+    }
+
+  });
+
+  $("nextQuestion")?.addEventListener(
+    "click",
+    nextQuestion
+  );
+
+  $("prevQuestion")?.addEventListener(
+    "click",
+    prevQuestion
+  );
+
+  window.addEventListener(
+    "hashchange",
+    route
+  );
+
+  /* =========================================
+     INITIALIZE
+  ========================================= */
 
   route();
 

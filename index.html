@@ -3,308 +3,1174 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#009BBF">
-  <meta name="description" content="強み・苦手・働き方・価値観から、自分に合ったキャリアを考える無料の自己分析ツール。">
-  <title>沿線キャリア 自己分析ラボ</title>
+
+  <title>沿線キャリア 自己分析ラボ｜無料で自分に合う仕事・働き方を知る</title>
+
+  <meta name="description" content="強み、苦手、働き方、価値観。4つの無料自己分析診断で、自分らしいキャリアを見つけよう。登録不要・途中保存OK。転職予定がなくても利用できます。">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="沿線キャリア 自己分析ラボ">
+  <meta property="og:description" content="まだ知らない自分に、出会う場所。4つの無料診断から、これからの働き方を考えよう。">
+  <meta property="og:url" content="https://test.ensen-career.jp/">
+  <meta property="og:image" content="https://test.ensen-career.jp/logo.png">
+  <meta property="og:locale" content="ja_JP">
+
+  <meta name="twitter:card" content="summary">
+
+  <link rel="canonical" href="https://test.ensen-career.jp/">
   <link rel="icon" href="./logo.png">
   <link rel="apple-touch-icon" href="./logo.png">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+1p:wght@400;500;700;800;900&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css">
+
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+1p:wght@400;500;700;800;900&family=Noto+Sans+JP:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./style.css?v=1.1">
+
   <script defer src="./config.js"></script>
   <script defer src="./questions.js"></script>
   <script defer src="./results.js"></script>
-  <script defer src="./script.js"></script>
+  <script defer src="./script.js?v=1.1"></script>
+
 </head>
+
 <body>
 
-<header class="site-header">
-  <div class="container header-inner">
-    <a href="#home" class="brand">
-      <img src="./logo.png" class="brand-logo" alt="沿線キャリア">
-      <span class="brand-divider"></span>
-      <span class="brand-sub">自己分析ラボ</span>
-    </a>
-    <nav class="header-nav" aria-label="メインメニュー">
-      <a href="#tests">診断一覧</a>
-      <a href="#profile">マイカルテ</a>
-      <a href="#about">私たちについて</a>
-      <a href="https://jobs.ensen-career.jp/">求人を探す</a>
-    </nav>
-    <a href="https://lin.ee/U4bFhFLe" class="btn btn-line">無料相談</a>
-  </div>
-</header>
+  <!-- ========================================
+       HEADER
+  ========================================= -->
 
-<main id="app">
+  <header class="site-header">
 
-  <div id="homeView">
+    <div class="container header-inner">
 
-    <section class="hero">
-      <div class="container hero-inner">
-        <div class="hero-copy">
-          <span class="eyebrow">ENSEN CAREER SELF-ANALYSIS LAB</span>
-          <h1>まだ知らない自分に、<br><strong>出会う場所。</strong></h1>
-          <p class="hero-description">
-            得意なこと、苦手なこと、大切にしたいこと。<br>
-            自分を知ることから、これからの働き方を考えてみませんか？
-          </p>
-          <div class="button-row">
-            <a href="#tests" class="btn btn-primary btn-lg">無料で自己分析を始める</a>
-            <a href="#profile" class="btn btn-secondary">マイカルテを見る</a>
-          </div>
-          <div class="hero-tags">
-            <span class="badge">完全無料</span>
-            <span class="badge">登録不要</span>
-            <span class="badge">途中保存OK</span>
-            <span class="badge">転職予定がなくてもOK</span>
-          </div>
-        </div>
+      <a href="#home" class="brand" aria-label="沿線キャリア 自己分析ラボ ホーム">
 
-        <div class="hero-visual">
-          <h2 class="hero-visual-title">4つの視点から、自分を知る。</h2>
-          <div class="hero-mini-grid">
-            <a href="#test/strength" class="hero-mini-card theme-strength">
-              <span>TEST 01</span>
-              <strong>強みを知る</strong>
-            </a>
-            <a href="#test/difficulty" class="hero-mini-card theme-difficulty">
-              <span>TEST 02</span>
-              <strong>苦手を知る</strong>
-            </a>
-            <a href="#test/workstyle" class="hero-mini-card theme-workstyle">
-              <span>TEST 03</span>
-              <strong>働き方を知る</strong>
-            </a>
-            <a href="#test/values" class="hero-mini-card theme-values">
-              <span>TEST 04</span>
-              <strong>価値観を知る</strong>
-            </a>
-          </div>
-          <p class="small muted" style="margin-top:18px">
-            4つの診断結果を、ひとつのマイカルテに。
-          </p>
-        </div>
-      </div>
-    </section>
+        <img
+          src="./logo.png"
+          class="brand-logo"
+          alt="沿線キャリア">
 
-    <div class="route-decoration" aria-hidden="true">
-      <span class="route-orange"></span>
-      <span class="route-yellow"></span>
-      <span class="route-blue"></span>
-      <span class="route-green"></span>
-    </div>
+        <span class="brand-divider"></span>
 
-    <section class="section" id="tests">
-      <div class="container">
-        <div class="section-heading center">
-          <span class="eyebrow">SELF ANALYSIS</span>
-          <h2>4つの自己分析診断</h2>
-          <p>気になる診断から、自由に始めてみましょう。</p>
-        </div>
-        <div id="testGrid" class="test-grid"></div>
-      </div>
-    </section>
+        <span class="brand-sub">
+          自己分析ラボ
+        </span>
 
-    <section class="section section-white">
-      <div class="container">
-        <div class="section-heading center">
-          <span class="eyebrow">HOW TO USE</span>
-          <h2>自己分析ラボの使い方</h2>
-        </div>
-        <div class="grid-3">
-          <article class="feature-card">
-            <div class="feature-number">01</div>
-            <h3>自分を知る</h3>
-            <p>日頃の行動や考え方を振り返り、自分の特徴を整理します。</p>
-          </article>
-          <article class="feature-card">
-            <div class="feature-number">02</div>
-            <h3>可能性を広げる</h3>
-            <p>強みや価値観をもとに、仕事や職場環境の選択肢を考えます。</p>
-          </article>
-          <article class="feature-card">
-            <div class="feature-number">03</div>
-            <h3>これからを考える</h3>
-            <p>診断結果をマイカルテにまとめ、今後のキャリアに活かします。</p>
-          </article>
-        </div>
-      </div>
-    </section>
+      </a>
 
-    <section class="section">
-      <div class="container">
-        <div class="karte-card">
-          <div class="section-heading">
-            <span class="eyebrow">MY CAREER PROFILE</span>
-            <h2>あなたのマイカルテ</h2>
-            <p>診断結果をまとめて、自分への理解を深めましょう。</p>
-          </div>
-          <div id="homeProgress" class="karte-summary"></div>
-          <div class="button-row" style="margin-top:24px">
-            <a href="#profile" class="btn btn-primary">マイカルテを見る</a>
-          </div>
-        </div>
-      </div>
-    </section>
+      <nav class="header-nav" aria-label="メインメニュー">
 
-    <section id="about" class="section philosophy">
-      <div class="container philosophy-inner">
-        <span class="eyebrow">OUR PHILOSOPHY</span>
-        <h2>なりたい自分から、<br>
-          <span class="philosophy-highlight">働き方を考える。</span>
-        </h2>
-        <p>
-          仕事は、なりたい自分に近づくための手段のひとつです。
-          得意なことも、苦手なことも、あなたの可能性を考えるための大切な情報です。
-        </p>
-        <p>
-          沿線キャリアでは、診断結果だけで仕事を決めるのではなく、
-          これまでの経験や将来像を一緒に整理し、
-          あなたに合ったキャリアの選択肢を考えます。
-        </p>
-      </div>
-    </section>
+        <a href="#tests">診断する</a>
 
-    <section class="section">
-      <div class="narrow">
-        <div class="section-heading center">
-          <span class="eyebrow">FAQ</span>
-          <h2>よくある質問</h2>
-        </div>
-        <div class="faq-list">
-          <details class="faq-item">
-            <summary>本当に無料で利用できますか？</summary>
-            <div class="faq-answer">すべての診断とキャリア相談を無料でご利用いただけます。</div>
-          </details>
-          <details class="faq-item">
-            <summary>転職する予定がなくても利用できますか？</summary>
-            <div class="faq-answer">もちろんです。今後の働き方や自己理解のためにもご利用いただけます。</div>
-          </details>
-          <details class="faq-item">
-            <summary>診断結果は保存されますか？</summary>
-            <div class="faq-answer">ご利用中のブラウザに保存されます。別の端末やブラウザには自動で引き継がれません。</div>
-          </details>
-          <details class="faq-item">
-            <summary>診断結果で向いている仕事が決まりますか？</summary>
-            <div class="faq-answer">診断結果は自己理解のための参考情報です。職業適性や能力を客観的に証明するものではありません。</div>
-          </details>
-          <details class="faq-item">
-            <summary>東西線沿線以外の仕事も相談できますか？</summary>
-            <div class="faq-answer">ご希望や求人状況に応じて、沿線外の求人についてもご提案します。</div>
-          </details>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <div class="consultation">
-          <h2>これからの働き方、一緒に考えませんか？</h2>
-          <p>今すぐ転職する必要はありません。自己分析の結果をもとに、あなたの希望や将来像を一緒に整理しましょう。</p>
-          <div class="button-row">
-            <a href="https://lin.ee/U4bFhFLe" class="btn btn-line">LINEで無料相談する</a>
-            <a href="https://jobs.ensen-career.jp/" class="btn btn-secondary">求人サイトを見る</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </div>
-
-  <section id="introView" class="test-page" hidden>
-    <div id="introContent" class="test-shell"></div>
-  </section>
-
-  <section id="quizView" class="quiz-page" hidden>
-    <div class="quiz-shell">
-      <div class="quiz-header">
-        <a href="#tests" class="back-link">← 診断一覧に戻る</a>
-        <h1 id="quizTitle"></h1>
-      </div>
-      <div class="progress-header">
-        <span id="progressText"></span>
-        <span id="progressPercent"></span>
-      </div>
-      <div class="progress-track">
-        <div id="progressFill" class="progress-fill"></div>
-      </div>
-      <div class="question-card">
-        <div id="questionNumber" class="question-number"></div>
-        <h2 id="questionText" class="question-text"></h2>
-        <div id="questionComparison"></div>
-        <div id="answerOptions" class="answer-options"></div>
-      </div>
-      <div class="quiz-actions">
-        <button id="prevQuestion" class="btn btn-ghost" type="button">← 前へ</button>
-        <button id="nextQuestion" class="btn btn-primary" type="button">次へ →</button>
-      </div>
-      <p class="quiz-footer">回答はこのブラウザに保存されます。</p>
-    </div>
-  </section>
-
-  <section id="resultView" class="result-page" hidden>
-    <div id="resultContent" class="result-shell"></div>
-  </section>
-
-  <section id="profileView" class="result-page" hidden>
-    <div id="profileContent" class="result-shell"></div>
-  </section>
-
-</main>
-
-<footer class="site-footer">
-  <div class="container">
-    <div class="footer-inner">
-      <div>
-        <a href="#home">
-          <img src="./logo.png" class="footer-logo" alt="沿線キャリア">
-        </a>
-        <div class="footer-company">
-          運営：合同会社アンスリウム<br>
-          有料職業紹介事業許可番号：13-ユ-316270
-        </div>
-      </div>
-      <div class="footer-links">
-        <a href="#tests">自己分析診断</a>
         <a href="#profile">マイカルテ</a>
+
         <a href="#about">私たちについて</a>
-        <a href="https://jobs.ensen-career.jp/">求人サイト</a>
-        <a href="https://lin.ee/U4bFhFLe">お問い合わせ</a>
-      </div>
+
+        <a href="https://jobs.ensen-career.jp/">
+          求人を探す
+        </a>
+
+      </nav>
+
+      <a href="https://lin.ee/U4bFhFLe"
+         class="btn btn-line">
+
+        LINE無料相談
+
+      </a>
+
     </div>
-    <p class="small muted" style="margin-top:24px">
-      本診断は自己理解やキャリア選択を支援する独自のツールであり、能力や職業適性を客観的に証明するものではありません。
-    </p>
-    <div class="copyright">© Anthurium LLC / 沿線キャリア</div>
+
+  </header>
+
+
+  <main id="app">
+
+    <!-- ========================================
+         HOME
+    ========================================= -->
+
+    <div id="homeView">
+
+      <!-- HERO -->
+
+      <section class="hero">
+
+        <div class="container hero-inner">
+
+          <div class="hero-copy">
+
+            <div class="station-marks" aria-hidden="true">
+
+              <span class="station-mark theme-strength">
+                01
+              </span>
+
+              <span class="station-mark theme-difficulty">
+                02
+              </span>
+
+              <span class="station-mark green theme-workstyle">
+                03
+              </span>
+
+              <span class="station-mark theme-values">
+                04
+              </span>
+
+            </div>
+
+            <span class="eyebrow">
+              ENSEN CAREER SELF-ANALYSIS LAB
+            </span>
+
+            <p class="hero-kicker">
+              仕事選びは、自分を知ることから。
+            </p>
+
+            <h1>
+              まだ知らない自分に、<br>
+              <strong>出会う場所。</strong>
+            </h1>
+
+            <p class="hero-description">
+
+              自分の強みってなんだろう？<br>
+              どんな仕事が自分に合っているんだろう？
+
+              <br><br>
+
+              4つの自己分析診断を通して、<br>
+              あなたらしい働き方を見つけてみませんか？
+
+            </p>
+
+            <div class="button-row">
+
+              <a href="#test/strength"
+                 class="btn btn-primary btn-lg">
+
+                無料で自己分析を始める →
+
+              </a>
+
+              <a href="#tests"
+                 class="btn btn-secondary">
+
+                診断一覧を見る
+
+              </a>
+
+            </div>
+
+            <div class="hero-tags">
+
+              <span class="badge">完全無料</span>
+
+              <span class="badge">登録不要</span>
+
+              <span class="badge">途中保存OK</span>
+
+            </div>
+
+            <p class="hero-caption">
+              就職・転職の予定がなくてもご利用いただけます。
+            </p>
+
+          </div>
+
+
+          <div class="hero-visual">
+
+            <h2 class="hero-visual-title">
+              自分を知る、4つのステップ。
+            </h2>
+
+            <div class="hero-mini-grid">
+
+              <a href="#test/strength"
+                 class="hero-mini-card theme-strength">
+
+                <span>TEST 01</span>
+                <strong>強みを知る</strong>
+
+              </a>
+
+              <a href="#test/difficulty"
+                 class="hero-mini-card theme-difficulty">
+
+                <span>TEST 02</span>
+                <strong>苦手を知る</strong>
+
+              </a>
+
+              <a href="#test/workstyle"
+                 class="hero-mini-card theme-workstyle">
+
+                <span>TEST 03</span>
+                <strong>働き方を知る</strong>
+
+              </a>
+
+              <a href="#test/values"
+                 class="hero-mini-card theme-values">
+
+                <span>TEST 04</span>
+                <strong>価値観を知る</strong>
+
+              </a>
+
+            </div>
+
+            <p class="small muted">
+              4つの診断結果を、ひとつのマイカルテに。
+            </p>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ROUTE LINE -->
+
+      <div class="route-decoration" aria-hidden="true">
+
+        <span class="route-orange"></span>
+        <span class="route-yellow"></span>
+        <span class="route-blue"></span>
+        <span class="route-green"></span>
+
+      </div>
+
+
+      <!-- TEST LIST -->
+
+      <section class="section" id="tests">
+
+        <div class="container">
+
+          <div class="section-heading center">
+
+            <span class="eyebrow">
+              SELF ANALYSIS
+            </span>
+
+            <h2>
+              4つの自己分析診断
+            </h2>
+
+            <p>
+              自分を知るための、4つの入り口。<br>
+              気になる診断から、自由に始められます。
+            </p>
+
+          </div>
+
+          <div id="testGrid" class="test-grid"></div>
+
+        </div>
+
+      </section>
+
+
+      <!-- RECOMMENDED USERS -->
+
+      <section class="section section-white">
+
+        <div class="container">
+
+          <div class="section-heading center">
+
+            <span class="eyebrow">
+              FOR YOU
+            </span>
+
+            <h2>
+              こんなこと、考えたことありませんか？
+            </h2>
+
+          </div>
+
+          <div class="grid-3">
+
+            <article class="feature-card theme-strength">
+
+              <div class="test-icon">？</div>
+
+              <h3>
+                自分の強みが分からない
+              </h3>
+
+              <p>
+                自己PRで何を伝えればいいのか分からない。
+                自分では当たり前だと思っていることが、
+                実は強みかもしれません。
+              </p>
+
+            </article>
+
+            <article class="feature-card theme-difficulty">
+
+              <div class="test-icon">！</div>
+
+              <h3>
+                今の仕事が合っているか不安
+              </h3>
+
+              <p>
+                頑張っているのに、なぜかうまくいかない。
+                自分の能力だけでなく、
+                仕事や環境との相性を考えてみましょう。
+              </p>
+
+            </article>
+
+            <article class="feature-card theme-workstyle">
+
+              <div class="test-icon">◎</div>
+
+              <h3>
+                これから何をしたいか分からない
+              </h3>
+
+              <p>
+                やりたい仕事が決まっていなくても大丈夫。
+                自分が大切にしたいことから、
+                これからの選択肢を考えてみましょう。
+              </p>
+
+            </article>
+
+          </div>
+
+          <div class="button-row"
+               style="justify-content:center;margin-top:32px">
+
+            <a href="#tests" class="btn btn-primary btn-lg">
+              自分について知ってみる →
+            </a>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- HOW TO USE -->
+
+      <section class="section">
+
+        <div class="container">
+
+          <div class="section-heading center">
+
+            <span class="eyebrow">
+              HOW TO USE
+            </span>
+
+            <h2>
+              自己分析ラボの使い方
+            </h2>
+
+            <p>
+              診断だけでも、もちろんOK！
+            </p>
+
+          </div>
+
+          <div class="grid-3">
+
+            <article class="feature-card">
+
+              <div class="feature-number">
+                01
+              </div>
+
+              <h3>
+                自分を知る
+              </h3>
+
+              <p>
+                4つの診断を受けて、
+                自分の強みや苦手なこと、
+                働き方の傾向、大切にしたい価値観を整理します。
+              </p>
+
+              <a href="#tests" class="btn btn-secondary">
+                診断を受ける →
+              </a>
+
+            </article>
+
+            <article class="feature-card">
+
+              <div class="feature-number">
+                02
+              </div>
+
+              <h3>
+                マイカルテを作る
+              </h3>
+
+              <p>
+                診断結果は自動でマイカルテにまとまります。
+                これからの希望や働き方を記入して、
+                自分だけのカルテを作りましょう。
+              </p>
+
+              <a href="#profile" class="btn btn-secondary">
+                マイカルテを見る →
+              </a>
+
+            </article>
+
+            <article class="feature-card">
+
+              <div class="feature-number">
+                03
+              </div>
+
+              <h3>
+                可能性を広げる
+              </h3>
+
+              <p>
+                もっと自分に合う仕事を知りたい方は、
+                沿線キャリアへ無料で相談できます。
+                診断結果を共有せずに相談することも可能です。
+              </p>
+
+              <a href="https://lin.ee/U4bFhFLe"
+                 class="btn btn-line">
+                LINEで無料相談 →
+              </a>
+
+            </article>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- MY CAREER PROFILE -->
+
+      <section class="section section-white">
+
+        <div class="container">
+
+          <div class="karte-card">
+
+            <div class="section-heading">
+
+              <span class="eyebrow">
+                MY CAREER PROFILE
+              </span>
+
+              <h2>
+                あなたのマイカルテ
+              </h2>
+
+              <p>
+                自分について分かったことを、
+                ひとつのカルテにまとめよう。
+              </p>
+
+            </div>
+
+            <div id="homeProgress"
+                 class="karte-summary"></div>
+
+            <div class="button-row">
+
+              <a href="#profile"
+                 class="btn btn-primary btn-lg">
+
+                マイカルテを見る →
+
+              </a>
+
+            </div>
+
+            <p class="small muted"
+               style="margin-top:16px">
+
+              すべての診断を受けていなくても、
+              マイカルテはご利用いただけます。
+
+            </p>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- PHILOSOPHY -->
+
+      <section id="about"
+               class="section philosophy">
+
+        <div class="container philosophy-inner">
+
+          <span class="eyebrow">
+            OUR PHILOSOPHY
+          </span>
+
+          <h2>
+
+            なりたい自分から、<br>
+
+            <span class="philosophy-highlight">
+              働き方を考える。
+            </span>
+
+          </h2>
+
+          <p>
+            仕事は、なりたい自分に近づくための
+            手段のひとつだと、私たちは考えています。
+          </p>
+
+          <p>
+            たくさん稼ぎたい人も、
+            新しいことに挑戦したい人も、
+            自宅の近くで穏やかに働きたい人も。
+            大切にしたいものは、人それぞれです。
+          </p>
+
+          <p>
+            得意なことも、苦手なことも、
+            あなたの可能性を考えるための大切な情報。
+            苦手なことをすべて克服する必要はありません。
+            自分に合う環境を見つけることも、
+            キャリアの選択肢のひとつです。
+          </p>
+
+          <p>
+            沿線キャリアでは、
+            診断結果だけで仕事を決めるのではなく、
+            これまでの経験や将来の希望を一緒に整理し、
+            あなたらしい働き方を考えます。
+          </p>
+
+          <div class="button-row"
+               style="margin-top:28px">
+
+            <a href="https://lin.ee/U4bFhFLe"
+               class="btn btn-line">
+
+              キャリアについて相談する →
+
+            </a>
+
+            <a href="https://jobs.ensen-career.jp/"
+               class="btn btn-secondary">
+
+              沿線キャリアの求人を見る
+
+            </a>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- FAQ -->
+
+      <section class="section">
+
+        <div class="narrow">
+
+          <div class="section-heading center">
+
+            <span class="eyebrow">
+              FAQ
+            </span>
+
+            <h2>
+              よくある質問
+            </h2>
+
+          </div>
+
+          <div class="faq-list">
+
+            <details class="faq-item">
+
+              <summary>
+                本当に無料で利用できますか？
+              </summary>
+
+              <div class="faq-answer">
+
+                はい。4つの診断、マイカルテの作成、
+                LINEでのキャリア相談は無料です。
+                診断に会員登録は必要ありません。
+
+              </div>
+
+            </details>
+
+
+            <details class="faq-item">
+
+              <summary>
+                すべての診断を受ける必要がありますか？
+              </summary>
+
+              <div class="faq-answer">
+
+                いいえ。気になる診断だけでも
+                ご利用いただけます。
+                4つすべてを受けることで、
+                より多角的に自分について考えることができます。
+
+              </div>
+
+            </details>
+
+
+            <details class="faq-item">
+
+              <summary>
+                就職・転職の予定がなくても利用できますか？
+              </summary>
+
+              <div class="faq-answer">
+
+                もちろんです。
+                今の仕事について考えたい方や、
+                将来のために自己分析をしておきたい方も
+                ご利用いただけます。
+
+              </div>
+
+            </details>
+
+
+            <details class="faq-item">
+
+              <summary>
+                社会人経験がなくても診断できますか？
+              </summary>
+
+              <div class="faq-answer">
+
+                はい。学校生活やアルバイト、
+                日常生活での経験を思い浮かべながら
+                回答してください。
+                判断できない質問は、
+                「分からない」を選択できます。
+
+              </div>
+
+            </details>
+
+
+            <details class="faq-item">
+
+              <summary>
+                診断の途中でページを閉じても大丈夫ですか？
+              </summary>
+
+              <div class="faq-answer">
+
+                回答はご利用中のブラウザに保存されるため、
+                同じ端末・ブラウザであれば
+                途中から再開できます。
+                ブラウザの設定やデータ削除によって、
+                保存内容が失われる場合があります。
+
+              </div>
+
+            </details>
+
+
+            <details class="faq-item">
+
+              <summary>
+                診断結果や個人情報は送信されますか？
+              </summary>
+
+              <div class="faq-answer">
+
+                診断結果やマイカルテの入力内容は、
+                ご利用中のブラウザに保存されます。
+                運営者へ自動送信する仕組みはありません。
+
+                LINEで相談する場合も、
+                ご自身で共有内容を確認し、
+                トーク画面に貼り付けて送信する形式です。
+
+              </div>
+
+            </details>
+
+
+            <details class="faq-item">
+
+              <summary>
+                診断結果で自分に向いている仕事が分かりますか？
+              </summary>
+
+              <div class="faq-answer">
+
+                本診断は自己回答に基づいて、
+                自分の傾向や仕事の選択肢を考えるための
+                独自の自己分析ツールです。
+
+                能力や職業適性を客観的に証明する検査ではなく、
+                特定の仕事への適性や就業成果を
+                保証するものではありません。
+
+              </div>
+
+            </details>
+
+
+            <details class="faq-item">
+
+              <summary>
+                東西線沿線以外の仕事も相談できますか？
+              </summary>
+
+              <div class="faq-answer">
+
+                はい。沿線キャリアの求人サイトは
+                東西線沿線を中心としていますが、
+                キャリア相談では他のエリアのご希望についても
+                お伺いしています。
+
+              </div>
+
+            </details>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- FINAL CTA -->
+
+      <section class="section section-white">
+
+        <div class="container">
+
+          <div class="consultation">
+
+            <span class="eyebrow">
+              YOUR NEXT STATION
+            </span>
+
+            <h2>
+              あなたの次の一歩を、<br>
+              一緒に考えませんか？
+            </h2>
+
+            <p>
+              やりたい仕事が決まっていなくても、
+              今すぐ転職する予定がなくても大丈夫。
+              あなたの希望や将来像を、
+              一緒に整理するところから始めましょう。
+            </p>
+
+            <div class="button-row">
+
+              <a href="https://lin.ee/U4bFhFLe"
+                 class="btn btn-line btn-lg">
+
+                LINEで無料相談する →
+
+              </a>
+
+              <a href="https://jobs.ensen-career.jp/"
+                 class="btn btn-secondary">
+
+                求人サイトを見る
+
+              </a>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+
+    <!-- ========================================
+         DIAGNOSIS INTRO
+    ========================================= -->
+
+    <section id="introView"
+             class="test-page"
+             hidden>
+
+      <div id="introContent"
+           class="test-shell"></div>
+
+    </section>
+
+
+    <!-- ========================================
+         QUIZ
+    ========================================= -->
+
+    <section id="quizView"
+             class="quiz-page"
+             hidden>
+
+      <div class="quiz-shell">
+
+        <div class="quiz-header">
+
+          <a href="#tests"
+             class="back-link">
+
+            ← 診断一覧に戻る
+
+          </a>
+
+          <h1 id="quizTitle"></h1>
+
+        </div>
+
+        <div class="progress-header">
+
+          <span id="progressText"></span>
+
+          <span id="progressPercent"></span>
+
+        </div>
+
+        <div class="progress-track">
+
+          <div id="progressFill"
+               class="progress-fill"></div>
+
+        </div>
+
+        <div class="question-card">
+
+          <div id="questionNumber"
+               class="question-number"></div>
+
+          <h2 id="questionText"
+              class="question-text"></h2>
+
+          <div id="questionComparison"></div>
+
+          <div id="answerOptions"
+               class="answer-options"></div>
+
+        </div>
+
+        <div class="quiz-actions">
+
+          <button id="prevQuestion"
+                  class="btn btn-ghost"
+                  type="button">
+
+            ← 前へ
+
+          </button>
+
+          <button id="nextQuestion"
+                  class="btn btn-primary"
+                  type="button"
+                  disabled>
+
+            次へ →
+
+          </button>
+
+        </div>
+
+        <p class="quiz-footer">
+
+          回答はこのブラウザに保存されます。<br>
+          途中で中断しても、あとから再開できます。
+
+        </p>
+
+      </div>
+
+    </section>
+
+
+    <!-- ========================================
+         RESULT
+    ========================================= -->
+
+    <section id="resultView"
+             class="result-page"
+             hidden>
+
+      <div id="resultContent"
+           class="result-shell"></div>
+
+    </section>
+
+
+    <!-- ========================================
+         MY CAREER PROFILE
+    ========================================= -->
+
+    <section id="profileView"
+             class="result-page"
+             hidden>
+
+      <div id="profileContent"
+           class="result-shell"></div>
+
+    </section>
+
+  </main>
+
+
+  <!-- ========================================
+       FOOTER
+  ========================================= -->
+
+  <div class="route-decoration" aria-hidden="true">
+
+    <span class="route-orange"></span>
+    <span class="route-yellow"></span>
+    <span class="route-blue"></span>
+    <span class="route-green"></span>
+
   </div>
-</footer>
 
-<nav class="mobile-nav" aria-label="モバイルメニュー">
-  <a href="#home">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 10 9-7 9 7v11h-7v-7h-4v7H3z"/></svg>
-    ホーム
-  </a>
-  <a href="#tests">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m7 9 2 2 4-4M7 16h10"/></svg>
-    診断一覧
-  </a>
-  <a href="#profile">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>
-    マイカルテ
-  </a>
-  <a href="https://lin.ee/U4bFhFLe">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11a9 9 0 0 1-9 9H3l2-5a9 9 0 1 1 16-4z"/></svg>
-    無料相談
-  </a>
-</nav>
+  <footer class="site-footer">
 
-<div id="toast" class="toast" role="status" hidden></div>
+    <div class="container">
 
-<noscript>
-  <p class="notice">診断をご利用いただくにはJavaScriptを有効にしてください。</p>
-</noscript>
+      <div class="footer-inner">
+
+        <div>
+
+          <a href="#home">
+
+            <img src="./logo.png"
+                 class="footer-logo"
+                 alt="沿線キャリア">
+
+          </a>
+
+          <div class="footer-company">
+
+            沿線キャリア 自己分析ラボ<br>
+
+            運営：合同会社アンスリウム<br>
+
+            有料職業紹介事業許可番号：13-ユ-316270
+
+          </div>
+
+        </div>
+
+        <div class="footer-links">
+
+          <a href="#home">
+            ホーム
+          </a>
+
+          <a href="#tests">
+            診断一覧
+          </a>
+
+          <a href="#profile">
+            マイカルテ
+          </a>
+
+          <a href="#about">
+            私たちについて
+          </a>
+
+          <a href="https://jobs.ensen-career.jp/">
+            求人サイト
+          </a>
+
+          <a href="https://lin.ee/U4bFhFLe">
+            お問い合わせ・無料相談
+          </a>
+
+        </div>
+
+      </div>
+
+      <p class="small muted">
+
+        本診断は自己理解やキャリア選択を支援する
+        独自の自己分析ツールです。
+        能力や職業適性を客観的に証明するものではなく、
+        特定の職種への適性や就業成果を保証するものではありません。
+
+      </p>
+
+      <div class="copyright">
+
+        © Anthurium LLC / 沿線キャリア
+
+      </div>
+
+    </div>
+
+  </footer>
+
+
+  <!-- ========================================
+       MOBILE NAVIGATION
+  ========================================= -->
+
+  <nav class="mobile-nav"
+       aria-label="モバイルメニュー">
+
+    <a href="#home">
+
+      <svg width="23"
+           height="23"
+           viewBox="0 0 24 24"
+           fill="none"
+           stroke="currentColor"
+           stroke-width="2"
+           stroke-linecap="round"
+           stroke-linejoin="round"
+           aria-hidden="true">
+
+        <path d="M3 10L12 3L21 10V21H15V14H9V21H3Z"/>
+
+      </svg>
+
+      <span>ホーム</span>
+
+    </a>
+
+
+    <a href="#tests">
+
+      <svg width="23"
+           height="23"
+           viewBox="0 0 24 24"
+           fill="none"
+           stroke="currentColor"
+           stroke-width="2"
+           stroke-linecap="round"
+           stroke-linejoin="round"
+           aria-hidden="true">
+
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+
+        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+
+        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+
+      </svg>
+
+      <span>診断する</span>
+
+    </a>
+
+
+    <a href="#profile">
+
+      <svg width="23"
+           height="23"
+           viewBox="0 0 24 24"
+           fill="none"
+           stroke="currentColor"
+           stroke-width="2"
+           stroke-linecap="round"
+           stroke-linejoin="round"
+           aria-hidden="true">
+
+        <rect x="4" y="3" width="16" height="19" rx="2"/>
+
+        <circle cx="12" cy="9" r="2.5"/>
+
+        <path d="M8 15H16M8 18H14"/>
+
+      </svg>
+
+      <span>マイカルテ</span>
+
+    </a>
+
+
+    <a href="https://lin.ee/U4bFhFLe">
+
+      <svg width="23"
+           height="23"
+           viewBox="0 0 24 24"
+           fill="none"
+           stroke="currentColor"
+           stroke-width="2"
+           stroke-linecap="round"
+           stroke-linejoin="round"
+           aria-hidden="true">
+
+        <path d="M21 11.5C21 16 17 19 12 19H10L5 22V17C3 15.5 2 13.5 2 11.5C2 7 6 4 12 4C17 4 21 7 21 11.5Z"/>
+
+        <path d="M7 11.5H7.1M12 11.5H12.1M17 11.5H17.1"/>
+
+      </svg>
+
+      <span>無料相談</span>
+
+    </a>
+
+  </nav>
+
+
+  <!-- STICKY NEXT BUTTON -->
+
+  <div id="stickyNext"
+       class="sticky-next"
+       hidden></div>
+
+
+  <!-- TOAST -->
+
+  <div id="toast"
+       class="toast"
+       role="status"
+       aria-live="polite"
+       hidden></div>
+
+
+  <noscript>
+
+    <div class="container">
+
+      <p class="notice">
+
+        診断をご利用いただくには、
+        JavaScriptを有効にしてください。
+
+      </p>
+
+    </div>
+
+  </noscript>
 
 </body>
 </html>
